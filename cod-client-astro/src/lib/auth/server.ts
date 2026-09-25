@@ -16,6 +16,12 @@ export interface AuthEnv {
   PUBLIC_TRUSTED_ORIGINS?: string;
   BETTER_AUTH_SECRET: string;
   /**
+   * JWT audience override — local dev points PUBLIC_API_URL at
+   * http://localhost:8787 (browser fetches) while cod-server's audience
+   * check accepts the production API origin instead. Unset in production.
+   */
+  JWT_AUDIENCE?: string;
+  /**
    * HMAC secret (>= 32 bytes) shared with cod-server for the MCP OAuth login
    * tickets minted after a successful sign-in. Optional: when missing or too
    * short, the MCP authorize relay fails closed.
@@ -83,7 +89,9 @@ export function createAuth(env: AuthEnv, cloudflare?: AuthCloudflareContext) {
         secret: env.BETTER_AUTH_SECRET,
         secondaryStorage,
         trustedOrigins: [
-          ...(import.meta.env.DEV ? ["http://localhost:4321"] : []),
+          ...(import.meta.env.DEV
+            ? ["http://localhost:4321", "http://localhost:4322"]
+            : []),
           ...(env.PUBLIC_TRUSTED_ORIGINS ?? "")
             .split(",")
             .map((o) => o.trim())
@@ -194,7 +202,7 @@ export function createAuth(env: AuthEnv, cloudflare?: AuthCloudflareContext) {
             jwt: {
               // Tokens are issued FOR the API resource, matching cod-server's
               // sessionAuth audience check (docs: "Modify Issuer, Audience…").
-              audience: env.PUBLIC_API_URL,
+              audience: env.JWT_AUDIENCE ?? env.PUBLIC_API_URL,
               // Default payload embeds the ENTIRE user row — including the
               // plaintext apiKey additionalField. Whitelist instead.
               definePayload: ({ user }) => ({

@@ -17,8 +17,8 @@ interface Props {
 const { id, name, label, placeholder, searchPlaceholder = "Search...", noResultsText = "No results found", options, required, error, dynamic } = Astro.props;
 ---
 
-<div class="custom-select-container relative w-full mb-4" data-id={id}>
-  <label for={id} class="form-label">{label} {required && <span class="text-red-400">*</span>}</label>
+<div class="custom-select-container cod-select-field relative w-full" data-id={id}>
+  <label for={id} class="form-label cod-select-label">{label} {required && <span class="text-red-400">*</span>}</label>
 
   <div class="relative">
     <button
@@ -26,14 +26,14 @@ const { id, name, label, placeholder, searchPlaceholder = "Search...", noResults
       id={`${id}-trigger`}
       disabled={dynamic || undefined}
       class:list={[
-        "w-full h-14 px-4 flex items-center justify-between text-start rounded-2xl border-2 active:scale-[0.99] transition-all focus:border-[var(--clr-primary)] outline-none",
-        error && "border-red-200 bg-red-50",
+        "cod-select-trigger",
+        "w-full flex items-center justify-between text-start outline-none",
+        error && "error",
         dynamic && "opacity-50 cursor-not-allowed",
       ]}
-      style="background: var(--clr-surface-alt); border-color: var(--clr-border)"
     >
-      <span class="truncate font-bold select-display-text" style="color: var(--clr-text-2)">{placeholder}</span>
-      <div class="flex items-center gap-2 shrink-0">
+      <span class="select-display-text cod-select-text truncate" style="color: var(--clr-text-2)">{placeholder}</span>
+      <div class="cod-select-icon flex items-center gap-2 shrink-0">
         <!-- Loading spinner (hidden by default, shown during async loads) -->
         <div class="select-spinner hidden w-4 h-4 border-2 border-t-transparent rounded-full animate-spin" style="border-color: var(--clr-text-2); border-top-color: transparent"></div>
         <Icon name="heroicons:chevron-down" class="w-5 h-5 shrink-0 select-chevron" style="color: var(--clr-text-2)" />
@@ -43,7 +43,7 @@ const { id, name, label, placeholder, searchPlaceholder = "Search...", noResults
     <!-- Dropdown Menu -->
     <div
       id={`${id}-dropdown`}
-      class="hidden absolute top-full left-0 right-0 mt-2 z-[100] border border-black/[.05] shadow-2xl rounded-2xl overflow-hidden flex flex-col max-h-[320px] origin-top"
+      class="cod-select-dropdown hidden absolute top-full left-0 right-0 mt-2 z-[100] border border-black/[.05] shadow-2xl rounded-2xl overflow-hidden flex flex-col max-h-[320px] origin-top"
       style="background: var(--clr-surface)"
       style="display: none"
     >
@@ -52,7 +52,7 @@ const { id, name, label, placeholder, searchPlaceholder = "Search...", noResults
         <div class="relative">
           <input
             type="text"
-            class="select-search-input w-full h-10 ps-10 pe-4 border-none rounded-xl font-bold text-sm focus:ring-2 focus:ring-[var(--clr-primary)]/20 outline-none"
+            class="cod-select-search select-search-input w-full h-10 ps-10 pe-4 border-none rounded-xl font-bold text-sm focus:ring-2 focus:ring-[var(--clr-primary)]/20 outline-none"
             style="background: var(--clr-surface-alt)"
             placeholder={searchPlaceholder}
             autocomplete="off"
@@ -68,7 +68,7 @@ const { id, name, label, placeholder, searchPlaceholder = "Search...", noResults
         {options.map(opt => (
           <button
             type="button"
-            class="select-option-item w-full text-start px-4 py-3.5 font-bold transition-colors flex items-center justify-between group"
+            class="select-option-item cod-select-option w-full text-start px-4 py-3.5 font-bold transition-colors flex items-center justify-between group"
             style="color: var(--clr-text)"
             data-value={opt.value}
             data-label={opt.label}

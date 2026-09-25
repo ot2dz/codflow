@@ -45,7 +45,7 @@ export interface StoreOrderData {
   customerName: string;
   phone: string;
   wilayaId: number;
-  communeId: string;
+  communeId?: string;
   address?: string;
   deliveryType: "home" | "stop_desk";
   productId: string;
@@ -965,7 +965,7 @@ export async function createStoreOrder(
       customerName: data.customerName,
       phone: data.phone,
       wilayaId: data.wilayaId,
-      communeId: data.communeId,
+      communeId: data.communeId ?? null,
       address: data.address ?? null,
       price,
       notes: data.notes ?? null,

@@ -68,7 +68,13 @@ export default defineConfig({
           "chat-bubble-left",  // WhatsApp CTA
           "chat-bubble-left-ellipsis", // OTP step
           "star",              // reviews header
-          "home-modern",       // delivery: home
+          "home-modern",      // delivery: home
+          "user",             // checkout: customer name field
+          "map-pin",          // checkout: address field
+          "chevron-up",       // checkout: order summary collapse
+          "pencil-square",    // checkout: notes field
+          "minus",            // checkout: quantity stepper
+          "plus",             // checkout: quantity stepper
         ],
       },
     }),

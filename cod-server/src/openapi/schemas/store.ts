@@ -42,6 +42,10 @@ export const StoreSchema = z
       description: "When false, reviews are hidden on the storefront and submission is disabled",
       example: true,
     }),
+    showCommune: z.boolean().openapi({
+      description: "When false, the commune field is hidden on the storefront checkout",
+      example: true,
+    }),
     status: z.enum(["active", "inactive"]).openapi({ example: "active" }),
     storeApiKey: z.string().nullable().openapi({
       description:
@@ -317,6 +321,10 @@ export const StoreConfigSchema = z
     announcementBar: z.string().nullable(),
     reviewsEnabled: z.boolean().openapi({
       description: "When false, the reviews section is hidden on the storefront",
+      example: true,
+    }),
+    showCommune: z.boolean().openapi({
+      description: "When false, the commune field is hidden on the storefront checkout",
       example: true,
     }),
     otpEnabled: z.boolean().openapi({

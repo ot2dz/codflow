@@ -10,6 +10,7 @@ import type { CategoryId } from "@/features/settings/model";
 import type { StoreConfig, UpdateStoreData } from "@/features/settings/types";
 import { SettingsSidebar } from "@/features/settings/components/SettingsSidebar";
 import { GeneralSettings } from "@/features/settings/components/GeneralSettings";
+import { CheckoutSettings } from "@/features/settings/components/CheckoutSettings";
 import { BrandingSettings } from "@/features/settings/components/BrandingSettings";
 import { SeoSettings } from "@/features/settings/components/SeoSettings";
 import { ReviewsSettings } from "@/features/settings/components/ReviewsSettings";
@@ -89,6 +90,8 @@ function SettingsContent() {
     switch (activeCategory) {
       case "general":
         return <GeneralSettings storeConfig={storeConfig} onSave={handleSave} />;
+      case "checkout":
+        return <CheckoutSettings storeConfig={storeConfig} onSave={handleSave} />;
       case "branding":
         return <BrandingSettings storeConfig={storeConfig} onSave={handleSave} />;
       case "seo":

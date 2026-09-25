@@ -22,6 +22,7 @@ export interface StoreConfig {
   ogImage: string | null;
   announcementBar: string | null;
   reviewsEnabled: boolean;
+  showCommune: boolean;
   status: StoreStatus;
   storeApiKey: string | null;
 }
@@ -45,6 +46,7 @@ export type UpdateStoreData = Partial<
     | "ogImage"
     | "announcementBar"
     | "reviewsEnabled"
+    | "showCommune"
     | "status"
   >
 >;

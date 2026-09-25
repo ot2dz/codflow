@@ -850,6 +850,8 @@ export const stores = sqliteTable("stores", {
   announcementBar: text("announcement_bar"),
   /** When false, reviews are hidden on the storefront and submission is disabled. */
   reviewsEnabled: integer("reviews_enabled", { mode: "boolean" }).notNull().default(true),
+  /** When false, the commune field is hidden on the storefront checkout. */
+  showCommune: integer("show_commune", { mode: "boolean" }).notNull().default(true),
 
   status: text("status", { enum: ["active", "inactive"] }).notNull().default("active"),
   /** Plaintext storefront API key — written on every provision so the merchant can view it in settings. */

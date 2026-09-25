@@ -301,7 +301,7 @@ export function initProductPage() {
     if (summaryItemPrice) summaryItemPrice.textContent = `${fmt(itemTotal)} ${cur}`;
     
     const summaryQtyLabel = document.getElementById("summary-qty-label");
-    if (summaryQtyLabel) summaryQtyLabel.textContent = `${qty} ×`;
+    if (summaryQtyLabel) summaryQtyLabel.textContent = `×${qty}`;
 
     const shippingEl = document.getElementById("summary-shipping");
     const totalEl    = document.getElementById("summary-total");
@@ -309,12 +309,15 @@ export function initProductPage() {
     // 3. Handle shipping logic in summary
     if (shippingEl && totalEl) {
       if (isNaN(currentShipping)) {
+        shippingEl.className = "competitor-shipping-badge";
         shippingEl.textContent = shippingCalc;
         totalEl.textContent = `${fmt(itemTotal)} ${cur}`;
       } else if (currentShipping === 0) {
+        shippingEl.className = "competitor-shipping-badge !bg-green-600";
         shippingEl.textContent = shippingFree;
         totalEl.textContent = `${fmt(itemTotal)} ${cur}`;
       } else {
+        shippingEl.className = "font-bold text-sm text-[var(--clr-text)]";
         shippingEl.textContent = `${fmt(currentShipping)} ${cur}`;
         totalEl.textContent = `${fmt(itemTotal + currentShipping)} ${cur}`;
       }
@@ -515,10 +518,10 @@ export function initProductPage() {
     
     const selectedType = document.querySelector<HTMLInputElement>('.delivery-radio-input:checked')?.value;
     
-    if (selectedType === "home") {
-      addressContainer.classList.remove("hidden");
-    } else {
+    if (selectedType === "stop_desk") {
       addressContainer.classList.add("hidden");
+    } else {
+      addressContainer.classList.remove("hidden");
     }
   }
 
@@ -752,6 +755,24 @@ export function initProductPage() {
     orderForm.addEventListener("submit", () => {
       if (fbcInput) fbcInput.value = getCookie("_fbc") ?? "";
       if (fbpInput) fbpInput.value = getCookie("_fbp") ?? "";
+    });
+  }
+
+  // ── STICKY FLOATING BUTTON OBSERVER ──
+  const stickyBar = document.getElementById("sticky-order-bar");
+  const stickyScrollBtn = document.getElementById("sticky-scroll-btn");
+  if (stickyBar && submitBtn) {
+    const stickyObs = new IntersectionObserver(
+      ([entry]) => {
+        stickyBar.classList.toggle("show", !entry.isIntersecting);
+      },
+      { threshold: 0, rootMargin: "-30px" }
+    );
+    stickyObs.observe(submitBtn);
+
+    stickyScrollBtn?.addEventListener("click", () => {
+      const orderSec = document.getElementById("order-section");
+      orderSec?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   }
 }

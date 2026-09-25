@@ -7,53 +7,59 @@ interface Props {
   content: any;
   fieldErrors: any;
   isRTL: boolean;
+  showCommune?: boolean;
 }
 
-const { content, fieldErrors, isRTL } = Astro.props;
+const { content, fieldErrors, isRTL, showCommune = true } = Astro.props;
 ---
 
-<div class="space-y-5 pt-2">
-  <div class="flex items-center gap-3 py-2">
-    <div class="h-px flex-1 bg-black/[.05]"></div>
-    <span class="text-[0.6875rem] font-black uppercase tracking-[0.2em]" style="color: var(--clr-text)">{content.formDeliverySection}</span>
-    <div class="h-px flex-1 bg-black/[.05]"></div>
-  </div>
-
-  <!-- Name -->
-  <div>
-    <label for="f-name" class="form-label">
-      {content.formNameLabel} <span class="text-red-400">*</span>
-    </label>
-    <input
-      id="f-name" type="text" name="customerName"
-      required autocomplete="name"
-      placeholder={content.formNamePlaceholder}
-      class:list={["form-input", fieldErrors.customerName && "error"]}
-    />
+<div class="competitor-inputs-grid">
+  <!-- Name Field -->
+  <div class="field">
+    <div class:list={["competitor-input-wrapper", fieldErrors.customerName && "!border-red-500"]}>
+      <span class="input-icon" aria-hidden="true">
+        <Icon name="heroicons:user" class="w-5 h-5" />
+      </span>
+      <input
+        id="f-name"
+        type="text"
+        name="customerName"
+        required
+        autocomplete="name"
+        placeholder={content.formNamePlaceholder}
+        aria-label={content.formNameLabel}
+      />
+    </div>
     {fieldErrors.customerName && (
-      <p class="text-[0.75rem] text-red-500 font-bold mt-2 ps-1">{fieldErrors.customerName[0]}</p>
+      <p class="text-[0.75rem] text-red-500 font-bold mt-1.5 ps-1">{fieldErrors.customerName[0]}</p>
     )}
   </div>
 
-  <!-- Phone -->
-  <div>
-    <label for="f-phone" class="form-label">
-      {content.formPhoneLabel} <span class="text-red-400">*</span>
-    </label>
-    <input
-      id="f-phone" type="tel" name="phone"
-      required autocomplete="tel" inputmode="tel"
-      placeholder={content.formPhonePlaceholder}
-      dir="ltr"
-      class:list={["form-input", fieldErrors.phone && "error"]}
-    />
+  <!-- Phone Field -->
+  <div class="field">
+    <div class:list={["competitor-input-wrapper", fieldErrors.phone && "!border-red-500"]}>
+      <span class="input-icon" aria-hidden="true">
+        <Icon name="heroicons:phone" class="w-5 h-5" />
+      </span>
+      <input
+        id="f-phone"
+        type="tel"
+        name="phone"
+        required
+        autocomplete="tel"
+        inputmode="tel"
+        placeholder={content.formPhonePlaceholder}
+        aria-label={content.formPhoneLabel}
+        dir="ltr"
+      />
+    </div>
     {fieldErrors.phone && (
-      <p class="text-[0.75rem] text-red-500 font-bold mt-2 ps-1">{fieldErrors.phone[0]}</p>
+      <p class="text-[0.75rem] text-red-500 font-bold mt-1.5 ps-1">{fieldErrors.phone[0]}</p>
     )}
   </div>
 
-  <!-- Wilaya - ALWAYS SHOWN -->
-  <div class="mb-1">
+  <!-- Wilaya Select -->
+  <div class:list={["field", !showCommune && "field-full"]}>
     <Select
       id="f-wilaya"
       name="wilayaId"
@@ -69,75 +75,64 @@ const { content, fieldErrors, isRTL } = Astro.props;
       }))}
     />
     {fieldErrors.wilayaId && (
-      <p class="text-[0.75rem] text-red-500 font-bold mt-2 ps-1">{fieldErrors.wilayaId[0]}</p>
+      <p class="text-[0.75rem] text-red-500 font-bold mt-1.5 ps-1">{fieldErrors.wilayaId[0]}</p>
     )}
   </div>
 
-  <!-- Commune - ALWAYS SHOWN -->
-  <div class="mb-1">
-    <Select
-      id="f-commune"
-      name="communeId"
-      label={content.formCommuneLabel}
-      placeholder={content.formCommuneDisabled}
-      searchPlaceholder={content.searchLabel}
-      noResultsText={content.noResultsLabel}
-      required={true}
-      error={fieldErrors.communeId?.[0]}
-      options={[]}
-      dynamic={true}
-    />
-    {fieldErrors.communeId && (
-      <p class="text-[0.75rem] text-red-500 font-bold mt-2 ps-1">{fieldErrors.communeId[0]}</p>
-    )}
+  <!-- Commune Select (conditional) -->
+  {showCommune && (
+    <div class="field">
+      <Select
+        id="f-commune"
+        name="communeId"
+        label={content.formCommuneLabel}
+        placeholder={content.formCommuneDisabled}
+        searchPlaceholder={content.searchLabel}
+        noResultsText={content.noResultsLabel}
+        required={true}
+        error={fieldErrors.communeId?.[0]}
+        options={[]}
+        dynamic={true}
+      />
+      {fieldErrors.communeId && (
+        <p class="text-[0.75rem] text-red-500 font-bold mt-1.5 ps-1">{fieldErrors.communeId[0]}</p>
+      )}
+    </div>
+  )}
+
+  <input type="hidden" name="deliveryType" value="home" />
+
+  <!-- Address Field -->
+  <div id="address-field-container" class="field field-full">
+    <div class="competitor-input-wrapper">
+      <span class="input-icon" aria-hidden="true">
+        <Icon name="heroicons:map-pin" class="w-5 h-5" />
+      </span>
+      <input
+        id="f-address"
+        type="text"
+        name="address"
+        autocomplete="street-address"
+        placeholder={content.formAddressPlaceholder}
+        aria-label={content.formAddressLabel}
+      />
+    </div>
   </div>
 
-  <!-- Delivery type -->
-  <div>
-    <fieldset>
-      <legend class="form-label">{content.formDeliveryLabel}</legend>
-      <div class="grid grid-cols-2 gap-3" id="delivery-type-group">
-        {[
-          { value: "home",      icon: "heroicons:home", label: content.formHomeDelivery },
-          { value: "stop_desk", icon: "heroicons:cube", label: content.formStopDesk },
-        ].map(({ value, icon, label }, i) => (
-          <label class="delivery-radio-label relative cursor-pointer group">
-            <input
-              type="radio" name="deliveryType" value={value}
-              checked={i === 0} class="sr-only delivery-radio-input"
-            />
-            <div class:list={[
-              "h-14 rounded-2xl border-2 flex items-center justify-center gap-2.5 font-black text-[0.875rem] transition-all select-none active:scale-95",
-              i === 0
-                ? "border-[var(--clr-primary)] text-[var(--clr-primary)] bg-[var(--clr-primary)]/5 shadow-sm"
-                : "border-[var(--clr-border)] text-[var(--clr-text-2)] bg-[var(--clr-surface-alt)]"
-            ]}>
-              <Icon name={icon} class="w-5 h-5" /><span>{label}</span>
-            </div>
-          </label>
-        ))}
-      </div>
-    </fieldset>
-  </div>
-
-  <!-- Address - CONDITIONAL: Only shown for home delivery -->
-  <div id="address-field-container">
-    <label for="f-address" class="form-label">{content.formAddressLabel}</label>
-    <input
-      id="f-address" type="text" name="address"
-      autocomplete="street-address"
-      placeholder={content.formAddressPlaceholder}
-      class="form-input"
-    />
-  </div>
-
-  <!-- Notes -->
-  <div>
-    <label for="f-notes" class="form-label">{content.formNotesLabel}</label>
-    <textarea
-      id="f-notes" name="notes" rows="2"
-      placeholder={content.formNotesPlaceholder}
-      class="form-input"
-    ></textarea>
+  <!-- Notes Field -->
+  <div class="field field-full">
+    <div class="competitor-input-wrapper !items-start">
+      <span class="input-icon !h-auto pt-4" aria-hidden="true">
+        <Icon name="heroicons:pencil-square" class="w-5 h-5" />
+      </span>
+      <textarea
+        id="f-notes"
+        name="notes"
+        rows="2"
+        placeholder={content.formNotesPlaceholder}
+        aria-label={content.formNotesLabel}
+        class="!py-3.5"
+      ></textarea>
+    </div>
   </div>
 </div>

@@ -33,6 +33,7 @@ export const DEFAULT_CONFIG: StoreConfig = {
   ogImage: null,
   announcementBar: null,
   reviewsEnabled: true,
+  showCommune: true,
   otpEnabled: false,
   turnstileEnabled: false,
   turnstileSiteKey: null,

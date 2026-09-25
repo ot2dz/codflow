@@ -26,46 +26,56 @@ interface Props {
   otpEnabled?: boolean;
   turnstileEnabled?: boolean;
   turnstileSiteKey?: string | null;
+  showCommune?: boolean;
   /** Landing page attribution — rides the form like fbc/fbp (best-effort). */
   landingPageSlug?: string | null;
 }
 
-const { product, content, fieldErrors, serverError, basePrice, defaultVariant, cur, isRTL, offers, defaultVariantId, isOutOfStock = false, otpEnabled = false, turnstileEnabled = false, turnstileSiteKey = null, landingPageSlug = null } = Astro.props;
+const {
+  product,
+  content,
+  fieldErrors,
+  serverError,
+  basePrice,
+  defaultVariant,
+  cur,
+  isRTL,
+  offers,
+  defaultVariantId,
+  isOutOfStock = false,
+  otpEnabled = false,
+  turnstileEnabled = false,
+  turnstileSiteKey = null,
+  landingPageSlug = null,
+  showCommune = true,
+} = Astro.props;
 
 const comparePrice = defaultVariant?.compareAtPrice ?? product.compareAtPrice ?? null;
 ---
 
-<!-- Order form card -->
-<div class="card !border-none !shadow-lg sm:!border sm:!shadow-md" id="order-section">
-  <!-- Card header -->
-  <div
-    class="px-6 py-5 border-b border-black/[.03]"
-    style="background: color-mix(in srgb, var(--clr-primary) 4%, white)"
-  >
-    <div class="flex items-center gap-3">
-       <div class="w-10 h-10 rounded-2xl flex items-center justify-center shadow-sm" style="background: var(--clr-surface); color: var(--clr-primary)">
-          <Icon name="heroicons:shopping-bag" class="w-5 h-5" />
-       </div>
-       <div>
-          <h2 class="font-black text-[1rem] leading-tight" style="color: var(--clr-text)">
-            {content.formTitle}
-          </h2>
-          <p class="text-[0.75rem] font-bold uppercase tracking-widest mt-0.5" style="color: var(--clr-text-2)">{content.orderCtaSubtext}</p>
-       </div>
+<!-- Competitor Styled Order Form Card -->
+<div class="competitor-checkout-card cod-checkout" id="order-section">
+  <!-- Card Header with Product Title & Price -->
+  <div class="flex items-center justify-between pb-4 mb-4 border-b border-[var(--clr-border)] gap-3">
+    <div class="text-lg sm:text-xl font-black text-[var(--clr-text)] truncate">
+      {product.name}
+    </div>
+
+    <div class="text-lg sm:text-xl font-black text-[var(--clr-primary)] shrink-0">
+      {basePrice.toLocaleString("ar-DZ")} <span class="text-xs font-bold text-[var(--clr-text-2)] uppercase">{cur}</span>
     </div>
   </div>
 
   {serverError && (
-    <div class="mx-6 mt-6 p-4 bg-red-50 border border-red-100 rounded-[1.25rem] text-[0.875rem] font-bold text-red-600 flex items-start gap-3">
+    <div class="mb-4 p-4 bg-red-50 border border-red-100 rounded-xl text-sm font-bold text-red-600 flex items-start gap-3">
       <Icon name="heroicons:exclamation-triangle" class="w-5 h-5 shrink-0" />
       <p>{serverError}</p>
     </div>
   )}
 
-  <form method="POST" action={actions.placeOrder} class="p-6 space-y-6">
-    <!-- Hidden product fields -->
+  <form method="POST" action={actions.placeOrder} class="space-y-4">
+    <!-- Hidden product fields (DO NOT MODIFY) -->
     <input type="hidden" name="productId"          value={product.id} />
-    <!-- Meta Pixel tracking (populated by JS at submit time) -->
     <input type="hidden" name="fbc" id="fbc-input" value="" />
     <input type="hidden" name="fbp" id="fbp-input" value="" />
     <input type="hidden" name="productName"        value={product.name} />
@@ -74,14 +84,13 @@ const comparePrice = defaultVariant?.compareAtPrice ?? product.compareAtPrice ??
     <input type="hidden" name="variantLabel"       value="" id="variant-label-input" />
     <input type="hidden" name="offerId"            value="" id="offer-id-input" />
     <input type="hidden" name="variantSelections"  value="[]" id="variant-selections-input" />
-    {/* WhatsApp OTP proof — set by the OTP step script after verification */}
     <input type="hidden" name="otpToken" id="otp-token-input" value="" />
-    {/* Landing page attribution — present only on landing pages */}
     {landingPageSlug && <input type="hidden" name="landingPageSlug" value={landingPageSlug} />}
 
-    {/* Standalone variant selector only when no offers — otherwise it lives inside the tier cards */}
+    <!-- Standalone variant selector (when no offers) -->
     {offers.length === 0 && <VariantSelector product={product} />}
 
+    <!-- Offer Tiers & Quantity -->
     <OfferTiers
       product={product}
       offers={offers}
@@ -93,18 +102,35 @@ const comparePrice = defaultVariant?.compareAtPrice ?? product.compareAtPrice ??
       defaultVariantId={defaultVariantId}
     />
 
+    <!-- Customer Information Fields -->
     <CustomerFields
       content={content}
       fieldErrors={fieldErrors}
       isRTL={isRTL}
+      showCommune={showCommune}
     />
 
+    <!-- Security Gates (WhatsApp OTP & Turnstile) -->
     {otpEnabled && <OtpStep content={content} isRTL={isRTL} />}
 
     {turnstileEnabled && turnstileSiteKey && (
       <TurnstileField siteKey={turnstileSiteKey} content={content} />
     )}
 
+    <!-- Submit Button -->
+    <button
+      type="submit"
+      class:list={[
+        "competitor-buy-btn",
+        isOutOfStock && "!cursor-not-allowed !opacity-50 !transform-none"
+      ]}
+      id="submit-btn"
+      disabled={isOutOfStock || undefined}
+    >
+      <span>{isOutOfStock ? content.outOfStock : content.orderCta}</span>
+    </button>
+
+    <!-- Collapsible Order Summary -->
     <OrderSummary
       product={product}
       basePrice={basePrice}
@@ -113,21 +139,17 @@ const comparePrice = defaultVariant?.compareAtPrice ?? product.compareAtPrice ??
       content={content}
     />
 
-    <!-- Submit -->
-    <button
-      type="submit"
-      class:list={[
-        "btn-primary !h-[4rem] !text-[1.125rem]",
-        isOutOfStock && "!bg-[var(--clr-disabled)] cursor-not-allowed"
-      ]}
-      id="submit-btn"
-      disabled={isOutOfStock || undefined}
-    >
-      {isOutOfStock ? content.outOfStock : content.formSubmit}
-    </button>
-
-    <p class="text-center text-[0.8125rem] font-bold px-4" style="color: var(--clr-text-2)">
+    <p class="text-center text-xs font-bold text-[var(--clr-text-2)] mt-3">
       {content.formConfirmNote}
     </p>
   </form>
+
+  <!-- Mobile Sticky Floating Order Bar -->
+  {!isOutOfStock && (
+    <div id="sticky-order-bar" class="competitor-sticky-container sm:hidden" aria-hidden="true">
+      <button type="button" id="sticky-scroll-btn">
+        {content.orderCta}
+      </button>
+    </div>
+  )}
 </div>

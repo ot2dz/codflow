@@ -47,7 +47,13 @@ export const server = {
         .max(20)
         .regex(/^[0-9+\s-]+$/, "رقم الهاتف غير صحيح"),
       wilayaId: z.coerce.number().int().min(1).max(58),
-      communeId: z.string().min(1, "يرجى اختيار البلدية"),
+      // Optional — the store may hide the commune field (showCommune=false).
+      // cod-server re-enforces it when the field is shown; empty hidden-input
+      // values arrive as "" and must become undefined.
+      communeId: z.preprocess(
+        (v) => (v === "" || v == null ? undefined : v),
+        z.string().min(1).optional()
+      ),
       address: z.string().max(300).optional(),
       deliveryType: z.enum(["home", "stop_desk"]).default("home"),
       notes: z.string().max(500).optional(),

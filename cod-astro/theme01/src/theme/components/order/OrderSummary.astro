@@ -1,6 +1,7 @@
 ---
 import type { Product, Offer } from "@/core/api/types";
 import type { StoreFrontContent } from "@/theme/config/content";
+import { Icon } from "astro-icon/components";
 
 interface Props {
   product: Product;
@@ -11,61 +12,87 @@ interface Props {
 }
 
 const { product, basePrice, cur, offers, content } = Astro.props;
+const productImage = product.coverImage?.src ?? product.images?.[0]?.src ?? "";
 
 function fmt(n: number) {
   return n.toLocaleString("ar-DZ");
 }
 ---
 
-<div class="relative rounded-[1.5rem] p-4 sm:p-6 border-2 border-dashed overflow-hidden" style="background: var(--clr-surface-alt); border-color: var(--clr-border)">
-  <div class="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full border-r-2 border-dashed" style="background: var(--clr-surface); border-color: var(--clr-border)"></div>
-  <div class="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full border-l-2 border-dashed" style="background: var(--clr-surface); border-color: var(--clr-border)"></div>
+<div class="order-summary mt-5" id="order-summary">
+  <details open class="competitor-summary-details">
+    <summary>
+      <span class="title">{content.summaryTitle}</span>
+      <Icon name="heroicons:chevron-up" class="w-5 h-5 summary-chevron" style="color: var(--clr-primary)" aria-hidden="true" />
+    </summary>
 
-  <div class="space-y-3 relative z-10">
-    <!-- Product line: Better mobile layout -->
-    <div class="flex items-start justify-between gap-2 text-[0.8125rem] sm:text-[0.875rem] font-bold" style="color: var(--clr-text)">
-      <div class="flex items-start gap-1.5 min-w-0 flex-1">
-        <span id="summary-qty-label" class="shrink-0">1 ×</span>
-        <span class="line-clamp-2 break-words">{product.name}</span>
-      </div>
-      <span id="summary-item-price" class="font-black shrink-0 whitespace-nowrap" style="color: var(--clr-text)">
-        {fmt(basePrice)} {cur}
-      </span>
-    </div>
-    
-    <!-- Shipping line -->
-    <div class="flex items-center justify-between text-[0.8125rem] sm:text-[0.875rem] font-bold" style="color: var(--clr-text-2)">
-      <span>{content.shippingLabel}</span>
-      <span id="summary-shipping" class="whitespace-nowrap" style="color: var(--clr-text-2)">{content.shippingCalculated}</span>
-    </div>
-    
-    <!-- Offer rows -->
-    {offers.map((offer) => {
-      const isFreeShipping = offer.discountType === "free_shipping";
-      const rewardLabel    = offer.rewardProductName + (offer.rewardVariantLabel ? ` (${offer.rewardVariantLabel})` : "");
-      return (
-        <div id={`offer-row-${offer.id}`} class="hidden flex items-center justify-between gap-2 text-[0.8125rem] sm:text-[0.875rem] font-bold text-emerald-600">
-          {isFreeShipping ? (
-            <>
-              <span class="truncate flex-1">{content.shippingLabel}</span>
-              <span class="shrink-0 whitespace-nowrap">{content.offerFreeShippingBadge}</span>
-            </>
-          ) : (
-            <>
-              <span class="truncate flex-1">{rewardLabel} × {offer.rewardQuantity}</span>
-              <span class="shrink-0 whitespace-nowrap">{content.offerFreeLabel}</span>
-            </>
+    <div class="summary-content">
+      <!-- Product line box -->
+      <div class="competitor-summary-product-box">
+        <div class="flex items-center gap-3">
+          {productImage && (
+            <img
+              id="summary-image"
+              class="w-12 h-12 object-cover rounded-lg border border-[var(--clr-border)]"
+              src={productImage}
+              alt={product.name}
+              loading="lazy"
+            />
           )}
+          <span class="font-bold text-sm text-[var(--clr-text)]">{product.name}</span>
+          <span
+            class="text-xs font-bold px-2 py-0.5 rounded text-white"
+            style="background-color: var(--clr-primary)"
+            id="summary-qty-label"
+          >
+            x1
+          </span>
         </div>
-      );
-    })}
-    
-    <!-- Total line: Better mobile sizing -->
-    <div class="pt-3 sm:pt-4 mt-2 border-t-2 border-dashed flex items-center justify-between gap-2" style="border-color: var(--clr-border)">
-      <span class="font-black text-[0.9375rem] sm:text-[1rem]" style="color: var(--clr-text)">{content.totalLabel}</span>
-      <span id="summary-total" class="font-black text-[1.25rem] sm:text-[1.5rem] tracking-tight whitespace-nowrap" style="color: var(--clr-primary)">
-        {fmt(basePrice)} {cur}
-      </span>
+        <span class="font-bold text-sm text-[var(--clr-text)]" id="summary-item-price">
+          {fmt(basePrice)} {cur}
+        </span>
+      </div>
+
+      <!-- Shipping row -->
+      <div class="flex items-center justify-between py-2 text-sm font-semibold text-[var(--clr-text-2)]">
+        <span>{content.shippingLabel}</span>
+        <span id="summary-shipping" class="competitor-shipping-badge">
+          {content.shippingCalculated}
+        </span>
+      </div>
+
+      <!-- Offer rows -->
+      {offers.map((offer) => {
+        const isFreeShipping = offer.discountType === "free_shipping";
+        const rewardLabel = offer.rewardProductName + (offer.rewardVariantLabel ? ` (${offer.rewardVariantLabel})` : "");
+        return (
+          <div id={`offer-row-${offer.id}`} class="hidden flex items-center justify-between py-1 text-sm font-bold text-[var(--clr-success)]">
+            {isFreeShipping ? (
+              <>
+                <span>{content.shippingLabel}</span>
+                <span>{content.offerFreeShippingBadge}</span>
+              </>
+            ) : (
+              <>
+                <span>{rewardLabel} × {offer.rewardQuantity}</span>
+                <span>{content.offerFreeLabel}</span>
+              </>
+            )}
+          </div>
+        );
+      })}
+
+      <!-- Total Banner (Green solid box like competitor) -->
+      <div class="competitor-summary-total-banner">
+        <span>{content.totalLabel}</span>
+        <span id="summary-total">{fmt(basePrice)} {cur}</span>
+      </div>
     </div>
-  </div>
+  </details>
 </div>
+
+<style>
+  details:not([open]) .summary-chevron {
+    transform: rotate(180deg);
+  }
+</style>

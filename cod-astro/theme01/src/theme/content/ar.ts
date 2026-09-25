@@ -132,6 +132,7 @@ export const ar: StoreFrontContent = {
   shippingFree: "مجاني",
   totalLabel: "المجموع الكلي",
   itemsLabel: "المنتجات",
+  summaryTitle: "ملخص الطلب",
 
   // ── Thank you page ────────────────────────────────────────────────────────
   thankYouTitle: "تم استلام طلبك!",

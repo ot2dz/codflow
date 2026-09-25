@@ -33,6 +33,8 @@ export interface StoreConfig {
   ogImage: string | null;
   announcementBar: string | null;
   reviewsEnabled: boolean;
+  /** When false, the commune field is hidden on the storefront checkout. */
+  showCommune: boolean;
   otpEnabled: boolean;
   /** Cloudflare Turnstile — true only when a store_turnstile_config row exists AND is enabled. */
   turnstileEnabled: boolean;

@@ -20,7 +20,13 @@ export const storeOrderSchema = z.object({
     )
   ),
   wilayaId: z.number().int().min(1).max(58),
-  communeId: z.string().min(1),
+  // Optional: hidden when the merchant disables the commune field in store
+  // settings. The handler re-enforces it when the field is shown (empty form
+  // values arrive as "").
+  communeId: z.preprocess(
+    (v) => (v === "" || v == null ? undefined : v),
+    z.string().min(1).optional()
+  ),
   address: z.string().max(300).optional(),
   deliveryType: z.enum(["home", "stop_desk"]).default("home"),
   productId: z.string().min(1).max(200),

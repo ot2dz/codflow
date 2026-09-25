@@ -132,6 +132,8 @@ export interface StoreFrontContent {
   shippingFree: string;
   totalLabel: string;
   itemsLabel: string;
+  /** Heading above the order summary card */
+  summaryTitle: string;
 
   // ── Thank you page ────────────────────────────────────────────────────────
   thankYouTitle: string;

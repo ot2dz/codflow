@@ -109,6 +109,7 @@ describe("Store API routes (OpenAPIHono)", () => {
         name: "متجري",
         lang: "ar",
         reviewsEnabled: true,
+        showCommune: true,
       } as any);
 
       const res = await app.request("/store/config");

@@ -132,6 +132,7 @@ export const fr: StoreFrontContent = {
   shippingFree: "Gratuit",
   totalLabel: "Total général",
   itemsLabel: "Produits",
+  summaryTitle: "Récapitulatif",
 
   // ── Thank you page ────────────────────────────────────────────────────────
   thankYouTitle: "Commande reçue !",

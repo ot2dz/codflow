@@ -129,6 +129,24 @@ export async function createStoreOrder(c: Context<AppContext>) {
   const data: import("./validation").StoreOrderInput =
     bodyData ?? storeOrderSchema.parse(await c.req.json());
 
+  // Commune is optional only when the merchant hid the field in store
+  // settings — otherwise a missing/empty value is rejected as before.
+  if (!data.communeId) {
+    const storeId = c.get("storeId")!;
+    const storeRow = await db
+      .select({ showCommune: stores.showCommune })
+      .from(stores)
+      .where(eq(stores.id, storeId))
+      .get();
+    if (storeRow?.showCommune !== false) {
+      throw new ValidationError(
+        "Commune is required",
+        ERROR_CODES.REQUIRED_FIELD_MISSING,
+        { communeId: true }
+      );
+    }
+  }
+
   // Turnstile bot gate — runs before the SKU/stock lookups so bot traffic is
   // rejected before spending D1 reads. No-op when the store has it disabled.
   await assertTurnstile(c, db, data);

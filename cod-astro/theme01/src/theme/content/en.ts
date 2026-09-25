@@ -132,6 +132,7 @@ export const en: StoreFrontContent = {
   shippingFree: "Free",
   totalLabel: "Total",
   itemsLabel: "Items",
+  summaryTitle: "Order Summary",
 
   // ── Thank you page ────────────────────────────────────────────────────────
   thankYouTitle: "Order received!",

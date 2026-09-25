@@ -38,6 +38,7 @@ function storeRow(overrides: Record<string, any> = {}) {
     ogImage: "https://cdn.example.com/og.png",
     announcementBar: "Free delivery on orders above 3000 دج",
     reviewsEnabled: true,
+    showCommune: true,
     status: "active",
     createdAt: NOW,
     updatedAt: NOW,

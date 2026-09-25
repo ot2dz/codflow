@@ -30,6 +30,7 @@ export const updateStoreSchema = z.object({
   ogImage: z.string().url().nullable().optional(),
   announcementBar: z.string().max(500).nullable().optional(),
   reviewsEnabled: z.boolean().optional(),
+  showCommune: z.boolean().optional(),
   status: z.enum(["active", "inactive"]).optional(),
 });
 
