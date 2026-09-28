@@ -9,10 +9,23 @@ import icon from "astro-icon";
 // standalone Node server for Docker/Coolify (see Dockerfile).
 const isNodeTarget = process.env.DEPLOY_TARGET === "node";
 
+// Behind a TLS-terminating reverse proxy (Coolify/Traefik) the Node adapter
+// only trusts X-Forwarded-Proto/Host when security.allowedDomains matches;
+// without it Astro.url stays http:// and every POST fails the origin check.
+// Comma-separated at build time: STOREFRONT_ALLOWED_DOMAINS=souqidz.com,www.souqidz.com
+const allowedDomains = (process.env.STOREFRONT_ALLOWED_DOMAINS ?? "")
+  .split(",")
+  .map((hostname) => hostname.trim())
+  .filter(Boolean)
+  .map((hostname) => ({ hostname }));
+
 export default defineConfig({
   output: "server",
   compressHTML: true,
   session: false,
+  security: {
+    allowedDomains,
+  },
   adapter: isNodeTarget
     ? node({ mode: "standalone" })
     : cloudflare({

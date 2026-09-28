@@ -5,7 +5,9 @@
 
 FROM node:22-alpine AS build
 WORKDIR /app
+ARG STOREFRONT_ALLOWED_DOMAINS
 ENV DEPLOY_TARGET=node
+ENV STOREFRONT_ALLOWED_DOMAINS=${STOREFRONT_ALLOWED_DOMAINS}
 COPY package.json package-lock.json ./
 COPY cod-shared/package.json cod-shared/
 COPY cod-server/package.json cod-server/
