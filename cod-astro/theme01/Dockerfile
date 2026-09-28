@@ -11,7 +11,7 @@ COPY cod-shared/package.json cod-shared/
 COPY cod-server/package.json cod-server/
 COPY cod-client-astro/package.json cod-client-astro/
 COPY cod-astro/theme01/package.json cod-astro/theme01/
-RUN npm ci
+RUN npm ci --workspace cod-astro-theme01 --include-workspace-root --ignore-scripts
 COPY cod-astro/theme01 cod-astro/theme01
 RUN npm run build --workspace cod-astro-theme01
 
