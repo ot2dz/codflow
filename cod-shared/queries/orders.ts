@@ -21,6 +21,9 @@ import {
   companyShipments,
   companyApiLogs,
   webhookEvents,
+  capiEventLog,
+  orderAssignments,
+  reviews,
 } from "../db/schema";
 import type { OrderStatus } from "../db/schema";
 import {
@@ -1266,15 +1269,22 @@ export async function deleteOrder(db: AppDb, orderId: string) {
     }
   }
 
-  // Delete related records. company_api_logs and webhook_events reference
-  // orders(id) with ON DELETE no action — they must be removed explicitly or
-  // the final orders delete fails the FOREIGN KEY constraint. Reviews and
-  // order_status_history cascade at the database level.
+  // Delete related records. Every table that references orders(id) must be
+  // cleared explicitly, children before parents: D1's batch does NOT defer
+  // foreign keys and does NOT reliably run ON DELETE CASCADE inside a batch,
+  // so a missed child fails the final orders delete with
+  // SQLITE_CONSTRAINT_FOREIGNKEY. Deletion order matters: order_products must
+  // go before products' stock_movements references, and capi_event_log,
+  // order_assignments, reviews, order_status_history all point at orders(id).
   statements.push(
     db.delete(companyApiLogs).where(eq(companyApiLogs.orderId, orderId)),
     db.delete(webhookEvents).where(eq(webhookEvents.orderId, orderId)),
     db.delete(companyShipments).where(eq(companyShipments.orderId, orderId)),
     db.delete(orderProducts).where(eq(orderProducts.orderId, orderId)),
+    db.delete(capiEventLog).where(eq(capiEventLog.orderId, orderId)),
+    db.delete(orderAssignments).where(eq(orderAssignments.orderId, orderId)),
+    db.delete(reviews).where(eq(reviews.orderId, orderId)),
+    db.delete(orderStatusHistory).where(eq(orderStatusHistory.orderId, orderId)),
     db.delete(orders).where(eq(orders.id, orderId)),
   );
 
