@@ -1,16 +1,23 @@
 import { defineConfig, envField, passthroughImageService } from "astro/config";
 import cloudflare from "@astrojs/cloudflare";
+import node from "@astrojs/node";
 import tailwindcss from "@tailwindcss/vite";
 import compress from "@playform/compress";
 import icon from "astro-icon";
+
+// Cloudflare Workers is the default target; DEPLOY_TARGET=node builds a
+// standalone Node server for Docker/Coolify (see Dockerfile).
+const isNodeTarget = process.env.DEPLOY_TARGET === "node";
 
 export default defineConfig({
   output: "server",
   compressHTML: true,
   session: false,
-  adapter: cloudflare({
-    imageService: "passthrough",
-  }),
+  adapter: isNodeTarget
+    ? node({ mode: "standalone" })
+    : cloudflare({
+        imageService: "passthrough",
+      }),
   env: {
     schema: {
       STORE_API_KEY: envField.string({

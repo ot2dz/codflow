@@ -42,7 +42,8 @@ npm run dev                      # http://localhost:4321
 ## Environment variables
 
 Defined in `astro.config.mjs` → `env.schema`, read from `.dev.vars` locally and
-`wrangler secret put` in production.
+`wrangler secret put` on Cloudflare (from the container environment on the
+Docker/Node build).
 
 | Variable | Required | Purpose |
 |----------|----------|---------|
@@ -106,6 +107,28 @@ wrangler secret put MEDIA_DOMAIN      # media.yourdomain.com
 
 `wrangler.jsonc` ships a local `COD_SERVER_URL` var — replace it before
 deploying. Never put real secrets in `wrangler.jsonc`.
+
+### Docker / Coolify
+
+The storefront can also run as a standalone Node server on any Docker host
+(Coolify included). Setting `DEPLOY_TARGET=node` selects the `@astrojs/node`
+adapter instead of the Cloudflare one; `cod-astro/theme01/Dockerfile` builds
+the image from the repo root (the monorepo root lockfile is required).
+
+```bash
+# from the repo root
+docker build -f cod-astro/theme01/Dockerfile -t codflow-storefront .
+docker run -p 3000:3000 \
+  -e COD_SERVER_URL=https://api.yourdomain.com \
+  -e STORE_API_KEY=your-store-key \
+  codflow-storefront
+```
+
+The server reads `HOST`/`PORT` (defaults `0.0.0.0:3000`) and the env vars above
+from the container environment. On Coolify, create a **Dockerfile** application
+with base directory `/` and Dockerfile location `cod-astro/theme01/Dockerfile`,
+expose port `3000`, and set `COD_SERVER_URL`, `STORE_API_KEY` (and optional
+`MEDIA_DOMAIN`) as environment variables.
 
 ## Documentation
 

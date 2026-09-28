@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- storefront (`theme01`): optional standalone **Node** build for Docker hosts —
+  `DEPLOY_TARGET=node npm run build` selects the `@astrojs/node` adapter and
+  `cod-astro/theme01/Dockerfile` runs the storefront as a Node server
+  (Coolify/any Docker platform); Cloudflare Workers stays the default target
 - checkout: optional per-store Cloudflare Turnstile bot protection on the
   order form (migration 0024 + `store_turnstile_config`), enabled from
   Dashboard → Settings → Verification with the merchant's own site/secret
