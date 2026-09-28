@@ -20,6 +20,109 @@ export const FILTER_STATUSES: OrderStatus[] = [
   "cancelled",
 ];
 
+export type OrderGroupKey =
+  | "all"
+  | "new"
+  | "confirmed"
+  | "in_progress"
+  | "following"
+  | "delivered"
+  | "returned"
+  | "cancelled";
+
+export interface OrderGroup {
+  key: OrderGroupKey;
+  /** Statuses that belong to this group. null = every status ("all"). */
+  statuses: OrderStatus[] | null;
+}
+
+/**
+ * Lifecycle buckets shown as tabs above the orders table. Fixed by product
+ * decision — not merchant-configurable. Order follows the fulfilment flow,
+ * with terminal outcomes last.
+ */
+export const ORDER_GROUPS: OrderGroup[] = [
+  { key: "all", statuses: null },
+  { key: "new", statuses: ["new"] },
+  { key: "confirmed", statuses: ["confirmed"] },
+  { key: "in_progress", statuses: ["unreachable"] },
+  {
+    key: "following",
+    statuses: [
+      "preparing",
+      "ready",
+      "assigned",
+      "dispatched",
+      "out_for_delivery",
+    ],
+  },
+  { key: "delivered", statuses: ["delivered"] },
+  { key: "returned", statuses: ["returned"] },
+  { key: "cancelled", statuses: ["cancelled"] },
+];
+
+export function groupOrders(
+  orders: OrderListItem[],
+  group: OrderGroupKey,
+): OrderListItem[] {
+  const def = ORDER_GROUPS.find((entry) => entry.key === group);
+  if (!def || !def.statuses) return orders;
+  return orders.filter((order) => def.statuses!.includes(order.status));
+}
+
+export function orderGroupCounts(
+  orders: OrderListItem[],
+): Record<OrderGroupKey, number> {
+  const counts = {} as Record<OrderGroupKey, number>;
+  for (const group of ORDER_GROUPS) {
+    counts[group.key] = group.statuses
+      ? orders.filter((order) => group.statuses!.includes(order.status)).length
+      : orders.length;
+  }
+  return counts;
+}
+
+export interface OrderUnit {
+  primary: OrderListItem;
+  duplicates: OrderListItem[];
+}
+
+/**
+ * Collapse orders that belong to the same customer (same phone) into a single
+ * display unit. The newest order becomes the primary row; the rest hang off it
+ * as `duplicates`. First-appearance order is preserved for stable pagination.
+ */
+export function groupDuplicateOrders(orders: OrderListItem[]): OrderUnit[] {
+  const units: OrderUnit[] = [];
+  const byPhone = new Map<string, OrderUnit>();
+  for (const order of orders) {
+    const key = order.phone.trim();
+    const existing = byPhone.get(key);
+    if (!existing) {
+      const unit: OrderUnit = { primary: order, duplicates: [] };
+      byPhone.set(key, unit);
+      units.push(unit);
+      continue;
+    }
+    if (
+      new Date(order.createdAt).getTime() >=
+      new Date(existing.primary.createdAt).getTime()
+    ) {
+      existing.duplicates.push(existing.primary);
+      existing.primary = order;
+    } else {
+      existing.duplicates.push(order);
+    }
+  }
+  for (const unit of units) {
+    unit.duplicates.sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
+  }
+  return units;
+}
+
 export const ALLOWED_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   new: ["confirmed", "unreachable", "cancelled"],
   confirmed: ["preparing", "unreachable", "cancelled"],
@@ -44,6 +147,17 @@ export interface OrderFilters {
   delivery: string;
   wilaya: string;
   type: string;
+  /** Inclusive creation-date range, "YYYY-MM-DD" in local time ("" = open). */
+  dateFrom: string;
+  dateTo: string;
+}
+
+/** The order's creation date as a local YYYY-MM-DD key (for range filtering). */
+export function localDateKey(iso: string): string {
+  const date = new Date(iso);
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
 }
 
 export type DetailStatusAction = {
@@ -299,6 +413,11 @@ export function filterOrders(
       (order.driverId || order.trackingNumber)
     )
       return false;
+    if (filters.dateFrom || filters.dateTo) {
+      const key = localDateKey(order.createdAt);
+      if (filters.dateFrom && key < filters.dateFrom) return false;
+      if (filters.dateTo && key > filters.dateTo) return false;
+    }
     return true;
   });
 }
@@ -341,11 +460,11 @@ export function sortOrders(
   });
 }
 
-export function paginateOrders(
-  orders: OrderListItem[],
+export function paginateOrders<T>(
+  orders: T[],
   page: number,
   pageSize: number,
-): OrderListItem[] {
+): T[] {
   const safePage = Math.max(1, page);
   const safePageSize = Math.max(1, pageSize);
   const start = (safePage - 1) * safePageSize;
@@ -355,6 +474,21 @@ export function paginateOrders(
 export function isTerminalStatus(status: OrderStatus): boolean {
   return (
     status === "delivered" || status === "returned" || status === "cancelled"
+  );
+}
+
+/**
+ * An order's customer + delivery details can be edited until it is handed to a
+ * carrier. Once tracking exists or the parcel is out for delivery, the order is
+ * locked.
+ */
+export function canEditOrder(
+  order: Pick<OrderListItem, "status" | "trackingNumber">,
+): boolean {
+  return (
+    !order.trackingNumber &&
+    !isTerminalStatus(order.status) &&
+    order.status !== "out_for_delivery"
   );
 }
 

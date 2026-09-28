@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Loader2, UploadCloud, X } from "lucide-react";
-import { getPresignedUploadUrl, reorderProductImages } from "@/features/products/api";
+import { reorderProductImages } from "@/features/products/api";
+import { uploadImageFile } from "@/lib/upload";
 import type { ProductImage } from "@/features/products/types";
 import { useT } from "@/i18n/react";
 import { notify } from "@/lib/notify";
@@ -60,10 +61,8 @@ export function ProductImageUploader({ existingImages, pendingImages, productId,
     setUploading(true);
     try {
       for (const file of arr) {
-        const { presignedUrl, key, publicUrl } = await getPresignedUploadUrl(file.type);
-        const putRes = await fetch(presignedUrl, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
-        if (!putRes.ok) throw new Error(`R2 upload failed: ${putRes.status}`);
-        onPendingAdd({ clientId: crypto.randomUUID(), key, url: publicUrl });
+        const { key, url } = await uploadImageFile(file, "products");
+        onPendingAdd({ clientId: crypto.randomUUID(), key, url });
       }
       notify.success(common("feedback.uploaded"));
     } catch {

@@ -139,5 +139,21 @@
   "events_load_failed": "تعذر تحميل الأحداث",
   "events_empty": "لا أحداث بعد",
   "events_empty_filtered": "لا أحداث بهذه النتيجة",
-  "events_empty_hint": "تصل الأحداث عندما يدفع الناقل تحديثات الحالة. سجّل الويبهوك أولاً — انظر صفحة بيانات الاعتماد."
+  "events_empty_hint": "تصل الأحداث عندما يدفع الناقل تحديثات الحالة. سجّل الويبهوك أولاً — انظر صفحة بيانات الاعتماد.",
+  "carrier_stock_title": "مخزون مستودع شركة التوصيل",
+  "carrier_stock_subtitle": "المنتجات التي تحتفظ بها شركة التوصيل في مخزونها. للعرض فقط — التحديث لا يمنع الإرسال.",
+  "carrier_stock_refresh": "تحديث",
+  "carrier_stock_empty": "لا يوجد مخزون لدى الناقل بعد",
+  "carrier_stock_empty_hint": "اضغط «تحديث» لجلب مخزون منتجات الناقل.",
+  "carrier_stock_synced": "تم تحديث مخزون الناقل",
+  "carrier_stock_synced_at": "آخر تحديث",
+  "carrier_stock_col_reference": "المرجع",
+  "carrier_stock_col_title": "المنتج",
+  "carrier_stock_col_available": "المتوفر",
+  "carrier_stock_col_reserved": "المحجوز",
+  "carrier_stock_col_physical": "الفيزيائي",
+  "stock_fulfillment_title": "التجهيز من مخزون الناقل",
+  "stock_fulfillment_hint": "يرسل الطلبية إلى الناقل بحالة stock=1 باستخدام SKU لكل سطر. الناقل يرفض الطلبات بلا مخزون؛ ومخزونك المحلي لا يتأثر.",
+  "stock_fulfillment_on": "تم تفعيل التجهيز من مخزون الناقل",
+  "stock_fulfillment_off": "تم إيقاف التجهيز من مخزون الناقل"
 }

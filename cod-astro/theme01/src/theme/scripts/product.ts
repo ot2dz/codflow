@@ -351,10 +351,7 @@ export function initProductPage() {
 
       // Reset siblings (skip OOS pills)
       document.querySelectorAll<HTMLButtonElement>(`.variant-opt[data-option="${opt}"]`).forEach((b) => {
-        b.classList.remove("text-[var(--clr-primary)]", "bg-[var(--clr-primary)]/5", "border-[var(--clr-primary)]");
-        b.classList.add("text-[var(--clr-text-2)]", "bg-[var(--clr-surface)]", "border-[var(--clr-border)]");
-        const icon = b.querySelector('.check-icon');
-        if (icon) icon.classList.replace('opacity-100', 'opacity-0');
+        clearVariantBtn(b);
       });
 
       selectVariantBtn(btn);
@@ -362,12 +359,35 @@ export function initProductPage() {
     });
   });
 
-  /** Visual helper for active variant button */
+  /** Visual helper for the active variant button (+ its group value label) */
   function selectVariantBtn(btn: HTMLButtonElement) {
-    btn.classList.remove("text-[var(--clr-text-2)]", "bg-[var(--clr-surface)]", "border-[var(--clr-border)]");
-    btn.classList.add("text-[var(--clr-primary)]", "bg-[var(--clr-primary)]/5", "border-[var(--clr-primary)]");
-    const icon = btn.querySelector('.check-icon');
-    if (icon) icon.classList.replace('opacity-0', 'opacity-100');
+    btn.classList.add("selected");
+    btn.setAttribute("aria-checked", "true");
+    const group = btn.closest("[data-variant-group]");
+    const valueEl = group?.querySelector<HTMLElement>("[data-selected-value]");
+    if (valueEl) valueEl.textContent = btn.dataset.value ?? "";
+
+    // Legacy OfferTiers pills keep their utility-class visual state.
+    if (!btn.closest(".variant-selector")) {
+      btn.classList.remove("text-[var(--clr-text-2)]", "bg-[var(--clr-surface)]", "border-[var(--clr-border)]");
+      btn.classList.add("text-[var(--clr-primary)]", "bg-[var(--clr-primary)]/5", "border-[var(--clr-primary)]");
+      const icon = btn.querySelector('.check-icon');
+      if (icon) icon.classList.replace('opacity-0', 'opacity-100');
+    }
+  }
+
+  /** Visual reset for an inactive variant button */
+  function clearVariantBtn(btn: HTMLButtonElement) {
+    btn.classList.remove("selected");
+    btn.setAttribute("aria-checked", "false");
+
+    // Legacy OfferTiers pills keep their utility-class visual state.
+    if (!btn.closest(".variant-selector")) {
+      btn.classList.remove("text-[var(--clr-primary)]", "bg-[var(--clr-primary)]/5", "border-[var(--clr-primary)]");
+      btn.classList.add("text-[var(--clr-text-2)]", "bg-[var(--clr-surface)]", "border-[var(--clr-border)]");
+      const icon = btn.querySelector('.check-icon');
+      if (icon) icon.classList.replace('opacity-100', 'opacity-0');
+    }
   }
 
   /**

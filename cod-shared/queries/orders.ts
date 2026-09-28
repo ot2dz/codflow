@@ -125,6 +125,8 @@ export async function getAllOrders(db: AppDb, filters: OrderFilters = {}) {
       lastUpdatedBy: sql<
         string | null
       >`(SELECT by FROM order_status_history WHERE order_id = orders.id ORDER BY timestamp DESC LIMIT 1)`,
+      quantity: sql<number>`(SELECT COALESCE(SUM(quantity), 0) FROM order_products WHERE order_id = orders.id)`,
+      lineCount: sql<number>`(SELECT COUNT(*) FROM order_products WHERE order_id = orders.id)`,
     })
     .from(orders)
     .leftJoin(wilayas, eq(orders.wilayaId, wilayas.id))
@@ -700,6 +702,375 @@ export async function assignCompany(db: AppDb, orderId: string, companyId: strin
       updatedAt: new Date().toISOString(),
     })
     .where(eq(orders.id, orderId));
+}
+
+/**
+ * Edit an existing order's customer + delivery details before dispatch.
+ *
+ * Partial patch — only keys present in `fields` are written. `deliveryFee`
+ * (when supplied by the caller after re-pricing a wilaya/delivery-type change)
+ * also re-derives `codAmount` so the amount the driver collects stays correct.
+ */
+export async function updateOrderDetails(
+  db: AppDb,
+  orderId: string,
+  fields: {
+    customerName?: string;
+    phone?: string;
+    wilayaId?: number;
+    communeId?: string | null;
+    address?: string | null;
+    deliveryType?: "home" | "stop_desk";
+    stationCode?: string | null;
+    notes?: string | null;
+    deliveryFee?: number;
+  },
+) {
+  const patch: Record<string, unknown> = { updatedAt: new Date().toISOString() };
+
+  if (fields.customerName !== undefined) patch.customerName = fields.customerName;
+  if (fields.phone !== undefined) patch.phone = fields.phone;
+  if (fields.wilayaId !== undefined) patch.wilayaId = fields.wilayaId;
+  if (fields.communeId !== undefined) patch.communeId = fields.communeId;
+  if (fields.address !== undefined) patch.address = fields.address;
+  if (fields.deliveryType !== undefined) patch.deliveryType = fields.deliveryType;
+  if (fields.stationCode !== undefined) patch.stationCode = fields.stationCode;
+  if (fields.notes !== undefined) patch.notes = fields.notes;
+  if (fields.deliveryFee !== undefined) {
+    patch.deliveryFee = fields.deliveryFee;
+    patch.codAmount = sql`${orders.price} + ${fields.deliveryFee}`;
+  }
+
+  await db.update(orders).set(patch).where(eq(orders.id, orderId));
+}
+
+export interface OrderLineEdit {
+  id: string;
+  /** New product data for the line (may differ from the previous product). */
+  productId: string;
+  productName: string;
+  variantId: string | null;
+  variantLabel: string | null;
+  sku: string | null;
+  /** Final quantity for the line. */
+  quantity: number;
+  /** Final unit price for the line. */
+  pricePerUnit: number;
+  /** Whether the new product/variant counts toward stock. */
+  trackInventory: boolean;
+  /** Previous product data — used to reconcile stock when it changes. */
+  previousProductId: string;
+  previousVariantId: string | null;
+  previousQuantity: number;
+  previousTrackInventory: boolean;
+}
+
+/**
+ * Apply merchant edits to an order's product lines — quantity, unit price, and
+ * even a replacement product/variant. In ONE batch it updates each line,
+ * reconciles inventory for tracked SKUs (restore the old SKU + deduct the new
+ * one, or a signed delta when the SKU is unchanged), and recomputes the order's
+ * product subtotal and COD amount (price + delivery fee). Deductions are
+ * guarded: the batch rolls back when inventory cannot cover the units.
+ */
+export async function applyOrderLineEdits(
+  db: AppDb,
+  orderId: string,
+  edits: OrderLineEdit[],
+  actor?: { id?: string; name?: string } | null,
+) {
+  const now = new Date().toISOString();
+  const statements: BatchStatement[] = [];
+  const createdBy = actor?.id ?? "system";
+  const createdByName = actor?.name ?? "النظام";
+
+  function pushDeduct(productId: string, variantId: string | null, qty: number) {
+    if (qty <= 0) return;
+    if (variantId) {
+      statements.push(
+        db.insert(stockMovements).values({
+          id: crypto.randomUUID(),
+          productId,
+          variantId,
+          type: "ORDER_DEDUCTED",
+          delta: -qty,
+          qtyBefore: sql`(SELECT inventory FROM product_variants WHERE id = ${variantId} AND inventory >= ${qty})`,
+          qtyAfter: sql`(SELECT inventory - ${qty} FROM product_variants WHERE id = ${variantId} AND inventory >= ${qty})`,
+          reason: null,
+          reference: orderId,
+          createdBy,
+          createdByName,
+          createdAt: now,
+        }),
+      );
+      statements.push(
+        db
+          .update(productVariants)
+          .set({ inventory: sql`${productVariants.inventory} - ${qty}`, updatedAt: now })
+          .where(
+            and(
+              eq(productVariants.id, variantId),
+              sql`${productVariants.inventory} >= ${qty}`,
+            ),
+          ),
+      );
+    } else {
+      statements.push(
+        db.insert(stockMovements).values({
+          id: crypto.randomUUID(),
+          productId,
+          variantId: null,
+          type: "ORDER_DEDUCTED",
+          delta: -qty,
+          qtyBefore: sql`(SELECT inventory FROM products WHERE id = ${productId} AND inventory >= ${qty})`,
+          qtyAfter: sql`(SELECT inventory - ${qty} FROM products WHERE id = ${productId} AND inventory >= ${qty})`,
+          reason: null,
+          reference: orderId,
+          createdBy,
+          createdByName,
+          createdAt: now,
+        }),
+      );
+      statements.push(
+        db
+          .update(products)
+          .set({ inventory: sql`${products.inventory} - ${qty}`, updatedAt: now })
+          .where(
+            and(eq(products.id, productId), sql`${products.inventory} >= ${qty}`),
+          ),
+      );
+    }
+  }
+
+  function pushRestore(productId: string, variantId: string | null, qty: number) {
+    if (qty <= 0) return;
+    if (variantId) {
+      statements.push(
+        db.insert(stockMovements).values({
+          id: crypto.randomUUID(),
+          productId,
+          variantId,
+          type: "ORDER_RETURNED",
+          delta: qty,
+          qtyBefore: sql`(SELECT inventory FROM product_variants WHERE id = ${variantId})`,
+          qtyAfter: sql`(SELECT inventory + ${qty} FROM product_variants WHERE id = ${variantId})`,
+          reason: null,
+          reference: orderId,
+          createdBy,
+          createdByName,
+          createdAt: now,
+        }),
+      );
+      statements.push(
+        db
+          .update(productVariants)
+          .set({ inventory: sql`${productVariants.inventory} + ${qty}`, updatedAt: now })
+          .where(eq(productVariants.id, variantId)),
+      );
+    } else {
+      statements.push(
+        db.insert(stockMovements).values({
+          id: crypto.randomUUID(),
+          productId,
+          variantId: null,
+          type: "ORDER_RETURNED",
+          delta: qty,
+          qtyBefore: sql`(SELECT inventory FROM products WHERE id = ${productId})`,
+          qtyAfter: sql`(SELECT inventory + ${qty} FROM products WHERE id = ${productId})`,
+          reason: null,
+          reference: orderId,
+          createdBy,
+          createdByName,
+          createdAt: now,
+        }),
+      );
+      statements.push(
+        db
+          .update(products)
+          .set({ inventory: sql`${products.inventory} + ${qty}`, updatedAt: now })
+          .where(eq(products.id, productId)),
+      );
+    }
+  }
+
+  for (const edit of edits) {
+    statements.push(
+      db
+        .update(orderProducts)
+        .set({
+          productId: edit.productId,
+          productName: edit.productName,
+          variantId: edit.variantId,
+          variantLabel: edit.variantLabel,
+          sku: edit.sku,
+          quantity: edit.quantity,
+          pricePerUnit: edit.pricePerUnit,
+          lineTotal: edit.quantity * edit.pricePerUnit,
+        })
+        .where(eq(orderProducts.id, edit.id)),
+    );
+
+    const sameSku =
+      edit.productId === edit.previousProductId &&
+      (edit.variantId ?? null) === (edit.previousVariantId ?? null);
+
+    if (!sameSku) {
+      if (edit.previousTrackInventory) {
+        pushRestore(edit.previousProductId, edit.previousVariantId, edit.previousQuantity);
+      }
+      if (edit.trackInventory) {
+        pushDeduct(edit.productId, edit.variantId, edit.quantity);
+      }
+    } else if (edit.trackInventory) {
+      const delta = edit.quantity - edit.previousQuantity;
+      if (delta > 0) pushDeduct(edit.productId, edit.variantId, delta);
+      else if (delta < 0) pushRestore(edit.productId, edit.variantId, -delta);
+    }
+  }
+
+  // Recompute product subtotal from the just-updated lines, then COD.
+  statements.push(
+    db
+      .update(orders)
+      .set({
+        price: sql`(SELECT COALESCE(SUM(line_total), 0) FROM order_products WHERE order_id = ${orderId})`,
+        codAmount: sql`((SELECT COALESCE(SUM(line_total), 0) FROM order_products WHERE order_id = ${orderId}) + ${orders.deliveryFee})`,
+        updatedAt: now,
+      })
+      .where(eq(orders.id, orderId)),
+  );
+
+  await db.batch(statements as [BatchStatement, ...BatchStatement[]]);
+}
+
+export interface NewOrderLine {
+  productId: string;
+  productName: string;
+  variantId: string | null;
+  variantLabel: string | null;
+  sku: string | null;
+  quantity: number;
+  pricePerUnit: number;
+  /** Whether the underlying product/variant counts toward stock. */
+  trackInventory: boolean;
+}
+
+/**
+ * Append new product lines to an existing order. In ONE batch it inserts the
+ * lines, deducts stock for tracked SKUs with a signed movement (guarded — the
+ * batch rolls back when inventory cannot cover the units), and recomputes the
+ * order's product subtotal and COD amount (price + delivery fee).
+ */
+export async function addOrderLines(
+  db: AppDb,
+  orderId: string,
+  lines: NewOrderLine[],
+  actor?: { id?: string; name?: string } | null,
+) {
+  if (lines.length === 0) return;
+  const now = new Date().toISOString();
+  const statements: BatchStatement[] = [];
+  const createdBy = actor?.id ?? "system";
+  const createdByName = actor?.name ?? "النظام";
+
+  for (const line of lines) {
+    statements.push(
+      db.insert(orderProducts).values({
+        id: crypto.randomUUID(),
+        orderId,
+        productId: line.productId,
+        productName: line.productName,
+        variantId: line.variantId,
+        variantLabel: line.variantLabel,
+        sku: line.sku,
+        quantity: line.quantity,
+        pricePerUnit: line.pricePerUnit,
+        lineTotal: line.quantity * line.pricePerUnit,
+        status: "fulfilled",
+        returnedQuantity: 0,
+        createdAt: now,
+      }),
+    );
+
+    if (!line.trackInventory) continue;
+
+    if (line.variantId) {
+      statements.push(
+        db.insert(stockMovements).values({
+          id: crypto.randomUUID(),
+          productId: line.productId,
+          variantId: line.variantId,
+          type: "ORDER_DEDUCTED",
+          delta: -line.quantity,
+          qtyBefore: sql`(SELECT inventory FROM product_variants WHERE id = ${line.variantId} AND inventory >= ${line.quantity})`,
+          qtyAfter: sql`(SELECT inventory - ${line.quantity} FROM product_variants WHERE id = ${line.variantId} AND inventory >= ${line.quantity})`,
+          reason: null,
+          reference: orderId,
+          createdBy,
+          createdByName,
+          createdAt: now,
+        }),
+      );
+      statements.push(
+        db
+          .update(productVariants)
+          .set({
+            inventory: sql`${productVariants.inventory} - ${line.quantity}`,
+            updatedAt: now,
+          })
+          .where(
+            and(
+              eq(productVariants.id, line.variantId),
+              sql`${productVariants.inventory} >= ${line.quantity}`,
+            ),
+          ),
+      );
+    } else {
+      statements.push(
+        db.insert(stockMovements).values({
+          id: crypto.randomUUID(),
+          productId: line.productId,
+          variantId: null,
+          type: "ORDER_DEDUCTED",
+          delta: -line.quantity,
+          qtyBefore: sql`(SELECT inventory FROM products WHERE id = ${line.productId} AND inventory >= ${line.quantity})`,
+          qtyAfter: sql`(SELECT inventory - ${line.quantity} FROM products WHERE id = ${line.productId} AND inventory >= ${line.quantity})`,
+          reason: null,
+          reference: orderId,
+          createdBy,
+          createdByName,
+          createdAt: now,
+        }),
+      );
+      statements.push(
+        db
+          .update(products)
+          .set({
+            inventory: sql`${products.inventory} - ${line.quantity}`,
+            updatedAt: now,
+          })
+          .where(
+            and(
+              eq(products.id, line.productId),
+              sql`${products.inventory} >= ${line.quantity}`,
+            ),
+          ),
+      );
+    }
+  }
+
+  statements.push(
+    db
+      .update(orders)
+      .set({
+        price: sql`(SELECT COALESCE(SUM(line_total), 0) FROM order_products WHERE order_id = ${orderId})`,
+        codAmount: sql`((SELECT COALESCE(SUM(line_total), 0) FROM order_products WHERE order_id = ${orderId}) + ${orders.deliveryFee})`,
+        updatedAt: now,
+      })
+      .where(eq(orders.id, orderId)),
+  );
+
+  await db.batch(statements as [BatchStatement, ...BatchStatement[]]);
 }
 
 export async function syncOrderAfterCarrierUpdate(

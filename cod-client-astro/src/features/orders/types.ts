@@ -88,6 +88,10 @@ export interface OrderBase {
 export interface OrderListItem extends OrderBase {
   hasReview?: number;
   lastUpdatedBy?: string | null;
+  /** Total units across the order's lines (from the list query). */
+  quantity?: number;
+  /** Number of product lines in the order (from the list query). */
+  lineCount?: number;
 }
 
 export interface OrderDetail extends OrderBase {

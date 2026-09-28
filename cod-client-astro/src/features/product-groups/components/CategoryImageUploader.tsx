@@ -1,8 +1,8 @@
 import { useRef, useState } from "react";
 import { Loader2, UploadCloud, X } from "lucide-react";
-import { getPresignedUploadUrl } from "@/features/product-groups/api";
 import { useT } from "@/i18n/react";
 import { notify } from "@/lib/notify";
+import { uploadImageFile } from "@/lib/upload";
 
 const ACCEPTED = ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"];
 const MAX_MB = 10;
@@ -24,10 +24,8 @@ export function CategoryImageUploader({ value, onChange, disabled }: { value?: s
     }
     setUploading(true);
     try {
-      const { presignedUrl, publicUrl } = await getPresignedUploadUrl(file.type);
-      const putRes = await fetch(presignedUrl, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
-      if (!putRes.ok) throw new Error(`Upload failed: ${putRes.status}`);
-      onChange(publicUrl);
+      const { url } = await uploadImageFile(file, "products");
+      onChange(url);
       notify.success(common("feedback.uploaded"));
     } catch {
       notify.error(common("feedback.upload_failed"));

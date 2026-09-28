@@ -1,13 +1,19 @@
 import { describe, expect, it } from "vitest";
 import {
   ALLOWED_TRANSITIONS,
+  ORDER_GROUPS,
   detailStatusActions,
   dispatchFieldSupport,
   canAssignOrder,
   canDeleteOrderFromDetail,
   canDispatchOrder,
+  canEditOrder,
   filterOrders,
   formatMoney,
+  groupDuplicateOrders,
+  groupOrders,
+  localDateKey,
+  orderGroupCounts,
   orderTotal,
   orderStatusFlow,
   orderStatusOptions,
@@ -16,7 +22,8 @@ import {
   shipmentUpdateFieldSupport,
   sortOrders,
 } from "./model";
-import type { OrderListItem } from "./types";
+import type { OrderListItem, OrderStatus } from "./types";
+import type { OrderGroupKey } from "./model";
 
 const order = (overrides: Partial<OrderListItem> = {}): OrderListItem => ({
   id: "1",
@@ -94,6 +101,8 @@ describe("orders model", () => {
         delivery: "driver",
         wilaya: "all",
         type: "all",
+        dateFrom: "",
+        dateTo: "",
       },
     );
     expect(result.map((item) => item.id)).toEqual(["2"]);
@@ -273,5 +282,180 @@ describe("orders model", () => {
       "2",
     ]);
     expect(paginateOrders(rows, 2, 2).map((item) => item.id)).toEqual(["3"]);
+  });
+});
+
+describe("canEditOrder", () => {
+  it("allows editing before the parcel is with the carrier", () => {
+    expect(canEditOrder(order({ status: "new", trackingNumber: null }))).toBe(
+      true,
+    );
+    expect(canEditOrder(order({ status: "ready", trackingNumber: null }))).toBe(
+      true,
+    );
+    expect(
+      canEditOrder(order({ status: "assigned", trackingNumber: null })),
+    ).toBe(true);
+  });
+
+  it("locks the order once the parcel is with the carrier", () => {
+    expect(
+      canEditOrder(order({ status: "dispatched", trackingNumber: "NE1DZ" })),
+    ).toBe(false);
+    expect(
+      canEditOrder(
+        order({ status: "out_for_delivery", trackingNumber: "NE1DZ" }),
+      ),
+    ).toBe(false);
+    expect(
+      canEditOrder(order({ status: "delivered", trackingNumber: "NE1DZ" })),
+    ).toBe(false);
+    expect(
+      canEditOrder(order({ status: "returned", trackingNumber: "NE1DZ" })),
+    ).toBe(false);
+    expect(
+      canEditOrder(order({ status: "cancelled", trackingNumber: null })),
+    ).toBe(false);
+  });
+});
+
+describe("order lifecycle groups", () => {
+  it("maps every status into exactly one non-'all' group", () => {
+    const statuses = ORDER_GROUPS.filter(
+      (group) => group.key !== "all",
+    ).flatMap((group) => group.statuses ?? []);
+    expect(new Set(statuses).size).toBe(statuses.length);
+    expect(statuses.sort()).toEqual(
+      [
+        "assigned",
+        "cancelled",
+        "confirmed",
+        "delivered",
+        "dispatched",
+        "new",
+        "out_for_delivery",
+        "preparing",
+        "ready",
+        "returned",
+        "unreachable",
+      ].sort(),
+    );
+  });
+
+  it("buckets each status into the agreed section", () => {
+    const cases: Record<OrderStatus, OrderGroupKey> = {
+      new: "new",
+      confirmed: "confirmed",
+      unreachable: "in_progress",
+      preparing: "following",
+      ready: "following",
+      assigned: "following",
+      dispatched: "following",
+      out_for_delivery: "following",
+      delivered: "delivered",
+      returned: "returned",
+      cancelled: "cancelled",
+    };
+    for (const [status, key] of Object.entries(cases) as [
+      OrderStatus,
+      OrderGroupKey,
+    ][]) {
+      const grouped = groupOrders([order({ status })], key);
+      expect(grouped).toHaveLength(1);
+    }
+  });
+
+  it("filters and counts by group", () => {
+    const rows = [
+      order({ id: "1", status: "new" }),
+      order({ id: "2", status: "new" }),
+      order({ id: "3", status: "confirmed" }),
+      order({ id: "4", status: "unreachable" }),
+      order({ id: "5", status: "dispatched" }),
+      order({ id: "6", status: "delivered" }),
+      order({ id: "7", status: "returned" }),
+      order({ id: "8", status: "cancelled" }),
+    ];
+    expect(groupOrders(rows, "all")).toHaveLength(8);
+    expect(groupOrders(rows, "new")).toHaveLength(2);
+    expect(groupOrders(rows, "in_progress")).toHaveLength(1);
+    expect(groupOrders(rows, "following")).toHaveLength(1);
+    const counts = orderGroupCounts(rows);
+    expect(counts.all).toBe(8);
+    expect(counts.new).toBe(2);
+    expect(counts.confirmed).toBe(1);
+    expect(counts.in_progress).toBe(1);
+    expect(counts.following).toBe(1);
+    expect(counts.delivered).toBe(1);
+    expect(counts.returned).toBe(1);
+    expect(counts.cancelled).toBe(1);
+  });
+});
+
+describe("order creation-date filtering", () => {
+  const baseFilters = {
+    query: "",
+    status: "all",
+    delivery: "all",
+    wilaya: "all",
+    type: "all",
+    dateFrom: "",
+    dateTo: "",
+  };
+
+  it("keeps only orders within the inclusive date range", () => {
+    const rows = [
+      order({ id: "a", createdAt: "2026-09-01T12:00:00.000Z" }),
+      order({ id: "b", createdAt: "2026-09-10T12:00:00.000Z" }),
+      order({ id: "c", createdAt: "2026-09-20T12:00:00.000Z" }),
+    ];
+    const from = localDateKey(rows[1].createdAt);
+    const to = localDateKey(rows[2].createdAt);
+    expect(
+      filterOrders(rows, { ...baseFilters, dateFrom: from, dateTo: to }).map(
+        (row) => row.id,
+      ),
+    ).toEqual(["b", "c"]);
+    expect(localDateKey(rows[0].createdAt) < from).toBe(true);
+  });
+});
+
+describe("duplicate order grouping", () => {
+  it("collapses orders with the same phone into one unit, newest first", () => {
+    const rows = [
+      order({
+        id: "a",
+        phone: "0550000000",
+        createdAt: "2026-09-26T10:00:00.000Z",
+      }),
+      order({
+        id: "b",
+        phone: "0550000000",
+        createdAt: "2026-09-26T10:05:00.000Z",
+      }),
+      order({ id: "c", phone: "0661111111" }),
+    ];
+    const units = groupDuplicateOrders(rows);
+    expect(units).toHaveLength(2);
+    const pair = units.find((unit) => unit.primary.phone === "0550000000")!;
+    expect(pair.primary.id).toBe("b");
+    expect(pair.duplicates.map((dup) => dup.id)).toEqual(["a"]);
+    const single = units.find((unit) => unit.primary.phone === "0661111111")!;
+    expect(single.duplicates).toHaveLength(0);
+  });
+
+  it("keeps first-appearance order and stacks 3+ copies", () => {
+    const rows = [
+      order({ id: "z", phone: "0770000000" }),
+      order({ id: "y", phone: "0550000000" }),
+      order({ id: "x", phone: "0770000000" }),
+      order({ id: "w", phone: "0770000000" }),
+    ];
+    const units = groupDuplicateOrders(rows);
+    expect(units.map((unit) => unit.primary.phone)).toEqual([
+      "0770000000",
+      "0550000000",
+    ]);
+    expect(units[0].duplicates).toHaveLength(2);
   });
 });

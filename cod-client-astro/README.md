@@ -40,8 +40,10 @@ npm run db:setup:local
 # 2. This package: copy config templates
 cd ../cod-client-astro
 cp wrangler.toml.example wrangler.toml   # fill in YOUR D1 + KV ids
-cp .env.example .env                     # PUBLIC_API_URL (defaults to local cod-server)
 cp .dev.vars.example .dev.vars           # set BETTER_AUTH_SECRET
+# No .env needed for local dev — `astro dev` always targets the local cod-server.
+# For a production build, copy .env.example → .env (gitignored) and set your
+# deployed PUBLIC_API_URL once; dev and prod never require editing it again.
 
 # 3. Create your admin (sign-up is disabled by design — admins are provisioned)
 npm run seed:admin
@@ -61,7 +63,8 @@ Sign in at `http://localhost:4321/sign-in` with the seeded credentials.
 
 | Where | Variable | Purpose |
 |---|---|---|
-| `.env` (build time, client) | `PUBLIC_API_URL` | backend origin used by `src/lib/api.ts` |
+| `.env.development` (committed) | `PUBLIC_API_URL` | dev placeholder for env validation; `astro dev` always targets `http://localhost:8787` |
+| `.env` (gitignored, build time) | `PUBLIC_API_URL` | production build origin — copy `.env.example`, set once |
 | `wrangler.toml [vars]` (runtime) | `PUBLIC_APP_URL` | better-auth base URL (JWT issuer) |
 | `wrangler.toml [vars]` | `PUBLIC_TRUSTED_ORIGINS` | extra origins allowed to POST to `/api/auth/*` |
 | `wrangler secret put` | `BETTER_AUTH_SECRET` | must be identical across every worker sharing the auth D1 |

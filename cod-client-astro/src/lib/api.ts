@@ -1,6 +1,10 @@
 import { PUBLIC_API_URL } from "astro:env/client";
 
-const API_URL = PUBLIC_API_URL;
+// Dev always talks to the local cod-server. This is deliberate: the Cloudflare
+// adapter serves the Worker's env vars in `astro dev`, so relying on
+// PUBLIC_API_URL there would force a Worker-var override that leaks into
+// production builds. Production bakes PUBLIC_API_URL from .env at build time.
+const API_URL = import.meta.env.DEV ? "http://localhost:8787" : PUBLIC_API_URL;
 
 import { currentJwt, refreshJwt } from "@/lib/session";
 

@@ -107,15 +107,16 @@ export async function dispatchToCompany(c: Context<AppContext>) {
     throw new ValidationError("Wilaya or commune not found in reference tables", ERROR_CODES.MISSING_WILAYA_COMMUNE);
   }
 
-  // Yalidine matches addresses by EXACT carrier-side strings; our reference
-  // names differ for ~25% of communes (accents/spellings). When a geo map
-  // exists (sync-geo), dispatch with the carrier's exact string instead.
+  // Yalidine + the EcoTrack family match addresses by EXACT carrier-side
+  // strings; our reference names differ for a slice of communes (accents /
+  // spellings — e.g. our "Soumaa" vs Packers' "Souma"). When a geo map exists
+  // (sync-geo), dispatch with the carrier's exact string instead.
   let wilayaName = wilayaRow.name;
   let communeName = communeRow.name;
-  if (company.code === "yalidine") {
+  if (company.code === "yalidine" || isEcotrackCompany(company.code)) {
     const [carrierWilaya, carrierCommune] = await Promise.all([
-      resolveCarrierWilayaName(db, "yalidine", order.wilayaId),
-      resolveCarrierCommuneName(db, "yalidine", order.communeId),
+      resolveCarrierWilayaName(db, company.code, order.wilayaId),
+      resolveCarrierCommuneName(db, company.code, order.communeId),
     ]);
     if (carrierWilaya) wilayaName = carrierWilaya;
     if (carrierCommune) communeName = carrierCommune;
@@ -124,7 +125,7 @@ export async function dispatchToCompany(c: Context<AppContext>) {
       // carrier will reject it. Nudge the admin to sync instead of letting
       // the carrier answer a cryptic per-parcel failure.
       console.warn(
-        `[dispatch] no yalidine geo mapping for commune=${order.communeId} (${communeRow.name}) — run sync-geo`
+        `[dispatch] no geo mapping for commune=${order.communeId} (${communeRow.name}) on ${company.code} — run sync-geo`
       );
     }
   }
@@ -195,6 +196,17 @@ export async function dispatchToCompany(c: Context<AppContext>) {
       ? `${uniqueProductNames.join(", ")} — ${order.orderNumber}`
       : order.orderNumber;
 
+    // Carrier-held stock fulfillment (EcoTrack): send `stock=1` with each order
+    // line's SKU as the carrier product reference. There is deliberately no
+    // local pre-check — the carrier refuses the parcel when its stock is
+    // insufficient and we surface that error. Local inventory is untouched.
+    const stockProducts =
+      company.stockFulfillment && isEcotrackCompany(company.code)
+        ? (order.products ?? [])
+            .filter((p) => p.sku)
+            .map((p) => ({ reference: p.sku as string, quantity: p.quantity }))
+        : undefined;
+
     const result = await provider.createShipment({
       orderId: order.id,
       customerName: order.customerName,
@@ -211,6 +223,7 @@ export async function dispatchToCompany(c: Context<AppContext>) {
       remarks: remarks ?? order.notes ?? undefined,
       weight,
       fragile: isFragile,
+      ...(stockProducts && stockProducts.length > 0 ? { stockProducts } : {}),
     });
 
     const durationMs = Date.now() - startMs;
@@ -510,17 +523,26 @@ export async function bulkDispatch(c: Context<AppContext>) {
       continue;
     }
 
-    // Yalidine: dispatch with the carrier's exact geo strings when mapped.
+    // Yalidine + EcoTrack family: dispatch with the carrier's exact geo
+    // strings when mapped (see single-dispatch note).
     let wilayaName = wilayaRow.name;
     let communeName = communeRow.name;
-    if (company.code === "yalidine") {
+    if (company.code === "yalidine" || isEcotrackCompany(company.code)) {
       const [carrierWilaya, carrierCommune] = await Promise.all([
-        resolveCarrierWilayaName(db, "yalidine", order.wilayaId),
-        resolveCarrierCommuneName(db, "yalidine", order.communeId),
+        resolveCarrierWilayaName(db, company.code, order.wilayaId),
+        resolveCarrierCommuneName(db, company.code, order.communeId),
       ]);
       if (carrierWilaya) wilayaName = carrierWilaya;
       if (carrierCommune) communeName = carrierCommune;
     }
+
+    // Carrier-held stock fulfillment (EcoTrack) — same rule as single dispatch.
+    const stockProducts =
+      company.stockFulfillment && isEcotrackCompany(company.code)
+        ? (order.products ?? [])
+            .filter((p) => p.sku)
+            .map((p) => ({ reference: p.sku as string, quantity: p.quantity }))
+        : undefined;
 
     validOrders.push({
       order,
@@ -538,6 +560,7 @@ export async function bulkDispatch(c: Context<AppContext>) {
         stationCode: order.stationCode ?? undefined,
         reference: order.orderNumber,
         remarks: order.notes ?? undefined,
+        ...(stockProducts && stockProducts.length > 0 ? { stockProducts } : {}),
       },
     });
   }

@@ -1,6 +1,34 @@
 {
   "page_title": "Orders",
   "orders_count": "orders",
+  "per_page_label": "Show",
+  "groups_label": "Order sections",
+  "groups": {
+    "all": "All",
+    "new": "New",
+    "confirmed": "Confirmed",
+    "in_progress": "In progress",
+    "following": "In follow-up",
+    "delivered": "Completed",
+    "returned": "Returned",
+    "cancelled": "Cancelled"
+  },
+  "duplicates": {
+    "toggle": "Show duplicates",
+    "badge": "Duplicate ×{count}",
+    "row_tag": "Duplicate"
+  },
+  "edit": {
+    "save": "Save",
+    "saved": "Changes saved",
+    "error": "Could not save changes"
+  },
+  "lines": {
+    "title": "Edit products",
+    "open": "Edit products",
+    "unit_price": "Unit price",
+    "line_total": "Line total"
+  },
   "new_order_button": "New Order",
   "search_placeholder": "Search by order number or customer...",
   "load_error": "Could not load orders",
@@ -17,6 +45,7 @@
     "driver": "Driver",
     "date": "Date",
     "not_assigned": "Not Assigned",
+    "quantity": "Qty",
     "total": "Total"
   },
   "actions": {
@@ -71,7 +100,9 @@
     "company": "Company",
     "unassigned": "Unassigned",
     "wilaya": "Wilaya",
-    "all_wilayas": "All Wilayas"
+    "all_wilayas": "All Wilayas",
+    "date_from": "From date",
+    "date_to": "To date"
   },
   "type": {
     "online": "Online",
@@ -123,6 +154,7 @@
     "no_notes": "No notes",
     "photos": "Photos",
     "status_timeline": "Order Timeline",
+    "manual_status_label": "Change status",
     "updating": "Updating...",
     "status_updated": "Status updated: ",
     "status_change_confirm_title": "Update order status?",
@@ -195,7 +227,17 @@
     "tracking_return_received": "Return received",
     "tracking_delivered": "Delivered",
     "tracking_encaissed": "Payment collected",
-    "tracking_payed": "Paid out"
+    "tracking_payed": "Paid out",
+    "edit_order": "Edit Order",
+    "edit_order_title": "Edit Order",
+    "edit_order_save": "Save Order",
+    "edit_order_success": "Order updated",
+    "edit_order_error": "Failed to update order",
+    "edit_order_fee_note": "Changing the wilaya or the delivery type recalculates the delivery fee.",
+    "error_commune_required": "Add the commune before confirming this order",
+    "add_product": "Add product",
+    "add_product_success": "Product added",
+    "add_product_error": "Could not add the product"
   },
   "next_status": {
     "new": "Confirm Order",
@@ -266,7 +308,12 @@
     "error_commune": "Please select a commune",
     "error_address": "Address is required for home delivery",
     "error_delivery_unavailable": "This delivery method is not available for the selected wilaya",
-    "new_order_subtitle": "Fill in the customer info and add products to create a new order"
+    "new_order_subtitle": "Fill in the customer info and add products to create a new order",
+    "error_quantity": "Enter a valid quantity (at least 1)",
+    "error_total_below_fee": "Total must be at least the delivery fee",
+    "products_subtotal": "Products subtotal",
+    "commune_search_placeholder": "Search commune...",
+    "commune_no_results": "No results"
   },
   "nav_group": "Sales",
   "abandoned": {

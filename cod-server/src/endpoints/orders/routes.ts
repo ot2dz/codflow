@@ -17,8 +17,10 @@ import * as shipmentOps from "./shipment-operations";
 import {
   createOrderSchema,
   updateOrderStatusSchema,
+  updateOrderSchema,
   assignDriverSchema,
   returnOrderProductSchema,
+  addOrderProductSchema,
   orderFiltersSchema,
   bulkDispatchSchema,
 } from "./validation";
@@ -144,7 +146,7 @@ const updateStatusRoute = defineRoute({
 **Branching statuses:**
 - \`unreachable\`: customer didn't answer — parks the order. Can retry back to \`confirmed\` or cancel
 
-**Transition guard:** Only forward moves in the flow are accepted. Invalid moves (e.g. \`delivered → new\`, \`cancelled → preparing\`) return \`400 INVALID_STATUS_TRANSITION\` with the list of allowed next statuses.
+**Transition guard:** Only forward moves in the flow are accepted. Invalid moves (e.g. \`delivered → new\`, \`cancelled → preparing\`) return \`400 INVALID_STATUS_TRANSITION\` with the list of allowed next statuses. Pass \`override: true\` to skip the guard and set any status (manual correction from the dashboard status dropdown).
 
 **Side effects:**
 - **delivered**: sets \`deliveryTime\`; increments driver's \`totalDelivered\` and \`totalEarnings\` if assigned
@@ -164,6 +166,72 @@ const updateStatusRoute = defineRoute({
     },
   },
   handler: statusTransitions.updateStatus,
+});
+
+const updateOrderRoute = defineRoute({
+  method: "patch",
+  path: "/{id}",
+  auth: { scope: SCOPES.ORDERS_UPDATE },
+  tags: ["Orders"],
+  summary: "Update order details",
+  description: `Edits an order's customer + delivery details before dispatch. Partial patch — only supplied fields are written:
+\`customerName\`, \`phone\`, \`wilayaId\`, \`communeId\`, \`address\`, \`deliveryType\`, \`stationCode\`, \`notes\`.
+
+**Use case:** complete a storefront order that arrived with a wilaya but no commune (carrier dispatch refuses a commune-less order), correct a name/phone, fix the address, or move the order to another wilaya.
+
+**Money:** changing \`wilayaId\` or \`deliveryType\` re-prices the delivery fee (and COD) from the shipping profile; correcting identity, commune, address, or notes never changes the amount owed.
+
+**Restrictions:** rejected once the order has a tracking number (already dispatched) or is in a locked status (\`out_for_delivery\`, \`delivered\`, \`returned\`, \`cancelled\`). A commune must belong to the order's (effective) wilaya.`,
+  operationId: "updateOrder",
+  params: IdParamSchema,
+  body: updateOrderSchema,
+  responses: {
+    200: {
+      description: "Order updated",
+      content: jsonContent(SuccessWithMessageSchema(OrderDetailSchema)),
+    },
+    400: {
+      description:
+        "Validation error (VALIDATION_FAILED / MISSING_WILAYA_COMMUNE / DELIVERY_NOT_AVAILABLE)",
+    },
+    404: {
+      description: "Order not found",
+    },
+    422: {
+      description:
+        "Order already dispatched (ORDER_ALREADY_DISPATCHED) or in a locked status (INVALID_STATUS_TRANSITION)",
+    },
+  },
+  handler: handlers.updateOrder,
+});
+
+const addOrderProductRoute = defineRoute({
+  method: "post",
+  path: "/{id}/products",
+  auth: { scope: SCOPES.ORDERS_UPDATE },
+  tags: ["Orders"],
+  summary: "Add a product line to an order",
+  description: `Appends one product line to an existing order — the same product's other variant or a different product entirely. The price defaults to the catalog (variant price when a variant is chosen) and may be overridden. Recomputed automatically: the order subtotal, the COD amount (price + delivery fee), and stock for tracked SKUs.`,
+  operationId: "addOrderProduct",
+  params: IdParamSchema,
+  body: addOrderProductSchema,
+  responses: {
+    201: {
+      description: "Product added",
+      content: jsonContent(SuccessWithMessageSchema(OrderDetailSchema)),
+    },
+    400: {
+      description: "Validation error (VALIDATION_FAILED)",
+    },
+    404: {
+      description: "Order or product not found",
+    },
+    422: {
+      description:
+        "Order already dispatched (ORDER_ALREADY_DISPATCHED), locked status (INVALID_STATUS_TRANSITION), or insufficient stock (INSUFFICIENT_STOCK)",
+    },
+  },
+  handler: handlers.addOrderProduct,
 });
 
 const assignDriverRoute = defineRoute({
@@ -667,6 +735,8 @@ router.openapi(getOrderRoute.route, getOrderRoute.handler);
 router.openapi(createOrderRoute.route, createOrderRoute.handler);
 router.openapi(deleteOrderRoute.route, deleteOrderRoute.handler);
 router.openapi(updateStatusRoute.route, updateStatusRoute.handler);
+router.openapi(updateOrderRoute.route, updateOrderRoute.handler);
+router.openapi(addOrderProductRoute.route, addOrderProductRoute.handler);
 router.openapi(assignDriverRoute.route, assignDriverRoute.handler);
 router.openapi(unassignDriverRoute.route, unassignDriverRoute.handler);
 router.openapi(returnOrderProductRoute.route, returnOrderProductRoute.handler);

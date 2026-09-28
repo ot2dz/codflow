@@ -95,6 +95,11 @@ const updateBodySchema = z.object({
   supportsStopDesk: z.boolean().optional(),
   supportsTracking: z.boolean().optional(),
   autoValidate: z.boolean().optional(),
+  stockFulfillment: z.boolean().optional().openapi({
+    description:
+      "Dispatch fulfils from stock the carrier holds (EcoTrack stock=1), keyed by each order line's SKU. " +
+      "The carrier refuses the parcel when its stock is insufficient; local CodFlow inventory is unaffected.",
+  }),
   notes: z.string().optional().nullable(),
 });
 
@@ -573,6 +578,80 @@ const listWebhookEventsRoute = defineRoute({
   handler: handlers.listWebhookEvents,
 });
 
+const carrierProductsRoute = defineRoute({
+  method: "get",
+  path: "/{id}/carrier-products",
+  auth: "api-key",
+  tags: ["Delivery Companies"],
+  summary: "List carrier-held stock",
+  description:
+    "Read the cached mirror of the products the carrier holds in its own stock (EcoTrack get/products/list). " +
+    "Display-only — refreshed on demand via POST .../sync-carrier-stock; dispatch never uses this as a gate.",
+  params: idParams,
+  responses: {
+    200: {
+      description: "Carrier products",
+      content: jsonContent(
+        z.object({
+          success: z.boolean(),
+          data: z.object({
+            products: z.array(
+              z.object({
+                id: z.string(),
+                reference: z.string(),
+                barcode: z.string().nullable(),
+                title: z.string().nullable(),
+                isActive: z.boolean(),
+                image: z.string().nullable(),
+                stockDisponible: z.number().int(),
+                stockReserve: z.number().int(),
+                stockPhysique: z.number().int(),
+                syncedAt: z.string(),
+              })
+            ),
+            total: z.number().int(),
+            syncedAt: z.string().nullable(),
+          }),
+        })
+      ),
+    },
+    404: { description: "Company not found" },
+  },
+  handler: handlers.fetchCompanyCarrierProducts,
+});
+
+const syncCarrierStockRoute = defineRoute({
+  method: "post",
+  path: "/{id}/sync-carrier-stock",
+  auth: "api-key",
+  tags: ["Delivery Companies"],
+  summary: "Refresh carrier-held stock mirror",
+  description:
+    "Pulls the carrier's product stock (EcoTrack get/products/list, paginated) into the local mirror shown in the dashboard. " +
+    "Display-only: this never gates dispatch — the carrier itself refuses out-of-stock parcels. " +
+    "Provider support: ecotrack ✅ | others ❌ OPERATION_NOT_SUPPORTED.",
+  params: idParams,
+  responses: {
+    200: {
+      description: "Carrier stock synced",
+      content: jsonContent(
+        z.object({
+          success: z.boolean(),
+          data: z.object({
+            total: z.number().int(),
+            pagesFetched: z.number().int(),
+            syncedAt: z.string().datetime(),
+          }),
+        })
+      ),
+    },
+    400: { description: "Company not connected — no API token stored" },
+    422: { description: "Provider does not expose carrier-held stock" },
+    502: { description: "External API failure" },
+  },
+  handler: handlers.syncCompanyCarrierStock,
+});
+
 // ─── Route Registrations ───────────────────────────────────────────────────────
 
 // Apply RBAC middleware to all routes
@@ -582,6 +661,8 @@ deliveryCompaniesRouter.use("/:id/stop-desks", requireScope(SCOPES.DELIVERY_READ
 deliveryCompaniesRouter.use("/:id/sync-stop-desks", requireScope(SCOPES.DELIVERY_MANAGE));
 deliveryCompaniesRouter.use("/:id/test-connection", requireScope(SCOPES.DELIVERY_READ));
 deliveryCompaniesRouter.use("/:id/reconcile-orders", requireScope(SCOPES.DELIVERY_MANAGE));
+deliveryCompaniesRouter.use("/:id/carrier-products", requireScope(SCOPES.DELIVERY_READ));
+deliveryCompaniesRouter.use("/:id/sync-carrier-stock", requireScope(SCOPES.DELIVERY_MANAGE));
 deliveryCompaniesRouter.use("/:id/stop-desks/:code/toggle", requireScope(SCOPES.DELIVERY_MANAGE));
 deliveryCompaniesRouter.use("/:id/webhook/register", requireScope(SCOPES.DELIVERY_MANAGE));
 deliveryCompaniesRouter.use("/:id/webhook/secret", requireScope(SCOPES.DELIVERY_MANAGE));
@@ -608,6 +689,12 @@ deliveryCompaniesRouter.openapi(testConnectionRoute.route, testConnectionRoute.h
 
 // POST /delivery-companies/:id/reconcile-orders — pull-based status drift repair (EcoTrack only)
 deliveryCompaniesRouter.openapi(reconcileOrdersRoute.route, reconcileOrdersRoute.handler);
+
+// GET /delivery-companies/:id/carrier-products — read the carrier-held stock mirror
+deliveryCompaniesRouter.openapi(carrierProductsRoute.route, carrierProductsRoute.handler);
+
+// POST /delivery-companies/:id/sync-carrier-stock — refresh the mirror from the carrier
+deliveryCompaniesRouter.openapi(syncCarrierStockRoute.route, syncCarrierStockRoute.handler);
 
 // PATCH /delivery-companies/:id/stop-desks/:code/toggle — toggle admin active flag
 deliveryCompaniesRouter.openapi(toggleStopDeskRoute.route, toggleStopDeskRoute.handler);

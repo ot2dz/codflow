@@ -82,6 +82,10 @@ export async function createUser(c: Context<AppContext>) {
   const validated = jsonBody ?? validation.createUserSchema.parse(await c.req.json());
   const actor = c.get("user");
 
+  // better-auth lowercases the submitted email at sign-in, so the stored email
+  // must be lowercased too — otherwise sign-in never matches (e.g. "Name@X.com").
+  const email = validated.email.trim().toLowerCase();
+
   // 1. Generate a temporary password for the new staff member
   const tempPassword = bytesToHex(randomBytes(10)); // 20-char hex string
   const passwordHash = await hashPassword(tempPassword);
@@ -95,12 +99,12 @@ export async function createUser(c: Context<AppContext>) {
   // 4. Check for duplicate email
   const { users: usersTable } = await import("@/db/schema");
   const { eq } = await import("drizzle-orm");
-  const existing = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.email, validated.email)).get();
+  const existing = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.email, email)).get();
   if (existing) {
     throw new ConflictError(
       "A user with this email already exists",
       ERROR_CODES.DUPLICATE_EMAIL,
-      { email: validated.email }
+      { email }
     );
   }
 
@@ -109,7 +113,7 @@ export async function createUser(c: Context<AppContext>) {
     db,
     {
       id: userId,
-      email: validated.email,
+      email,
       name: validated.name,
       role: validated.role,
       status: "active",
@@ -132,7 +136,7 @@ export async function createUser(c: Context<AppContext>) {
   const invite = await sendInviteEmail(db, c.env, {
     userId,
     name: validated.name,
-    email: validated.email,
+    email,
     tempPassword,
     language: validated.language ?? "en",
   });
@@ -157,7 +161,10 @@ export async function updateUser(c: Context<AppContext>) {
   const id = c.req.param("id")!;
   const jsonBody: any = (c.req as any).valid?.("json");
   const validated = jsonBody ?? validation.updateUserSchema.parse(await c.req.json());
-  const user = await queries.updateUser(db, id, validated);
+  const updates = validated.email
+    ? { ...validated, email: validated.email.trim().toLowerCase() }
+    : validated;
+  const user = await queries.updateUser(db, id, updates);
   
   if (!user) {
     throw new NotFoundError("User", id);
@@ -276,5 +283,49 @@ export async function rotateApiKey(c: Context<AppContext>) {
 
   const result = await queries.rotateApiKey(db, id);
   return c.json({ success: true, data: result, message: "API key rotated successfully" }, 200);
+}
+
+/**
+ * POST /users/:id/reset-password
+ * Issues a new temporary password for a member (admin only). Replaces the
+ * stored credential hash; the plaintext is returned once and never stored.
+ * Covers the case where the temp password shown at creation was lost and
+ * email sending is not configured.
+ */
+export async function resetUserPassword(c: Context<AppContext>) {
+  const db = getDb(c.env.DB);
+  const id = c.req.param("id")!;
+
+  const existing = await queries.getUserById(db, id);
+  if (!existing) {
+    throw new NotFoundError("User", id);
+  }
+
+  const tempPassword = bytesToHex(randomBytes(10));
+  const passwordHash = await hashPassword(tempPassword);
+
+  const { accounts } = await import("@/db/schema");
+  const { eq, and } = await import("drizzle-orm");
+
+  const updated = await db
+    .update(accounts)
+    .set({ password: passwordHash, updatedAt: new Date() })
+    .where(and(eq(accounts.userId, id), eq(accounts.providerId, "credential")))
+    .returning({ id: accounts.id });
+
+  if (updated.length === 0) {
+    throw new NotFoundError("Credential account", id);
+  }
+
+  const actor = c.get("user");
+  await logActivity(db, actor, ACTIONS.USER_PASSWORD_RESET, {
+    type: "user", id, label: existing.name ?? undefined,
+  });
+
+  return c.json({
+    success: true,
+    data: { tempPassword },
+    message: "Password reset. Share the temporary password with the user — it will not be shown again.",
+  }, 200);
 }
 

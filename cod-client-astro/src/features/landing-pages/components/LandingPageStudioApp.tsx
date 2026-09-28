@@ -21,13 +21,13 @@ import { SCOPES } from "../../../../../cod-shared/rbac/scopes";
 import {
   deleteLandingPageImage,
   getLandingPage,
-  getPresignedLandingUploadUrl,
   publishLandingPage,
   reorderLandingPageImages,
   saveLandingPageImage,
   unpublishLandingPage,
   updateLandingPage,
 } from "@/features/landing-pages/api";
+import { uploadImageFile } from "@/lib/upload";
 import { landingPageErrorMessage, landingPagePublicUrl } from "@/features/landing-pages/model";
 import type { LandingPage, LandingPageImage } from "@/features/landing-pages/types";
 
@@ -223,17 +223,11 @@ function Gated({ landingPageId }: { landingPageId: string }) {
       setUploading(true);
       try {
         for (const file of arr) {
-          const { presignedUrl, key, publicUrl } = await getPresignedLandingUploadUrl(file.type);
-          const putRes = await fetch(presignedUrl, {
-            method: "PUT",
-            headers: { "Content-Type": file.type },
-            body: file,
-          });
-          if (!putRes.ok) throw new Error(`R2 upload failed: ${putRes.status}`);
+          const { key, url } = await uploadImageFile(file, "landing");
           const dims = await measureImage(file);
           const images = await saveLandingPageImage(landingPageId, {
             key,
-            src: publicUrl,
+            src: url,
             ...(dims ?? {}),
           });
           setLp((prev) => (prev ? { ...prev, images } : prev));

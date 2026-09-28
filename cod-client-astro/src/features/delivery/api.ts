@@ -1,7 +1,7 @@
 import { apiFetch } from "@/lib/api";
 import { listOrders } from "@/features/orders/api";
 import type { OrderListItem } from "@/features/orders/types";
-import type { Driver, DriverCompensation, DriverOrder, DriverPayment, DriverPaymentType, DriverStatus, VehicleType, Wilaya, DeliveryCompany, StopDesk, ShippingProfile, ShippingProfileWithRules, CommuneOverride } from "./types";
+import type { Driver, DriverCompensation, DriverOrder, DriverPayment, DriverPaymentType, DriverStatus, VehicleType, Wilaya, DeliveryCompany, StopDesk, ShippingProfile, ShippingProfileWithRules, CommuneOverride, CarrierProductsResult } from "./types";
 
 interface ListEnvelope<T> {
   success: boolean;
@@ -210,6 +210,25 @@ export interface ReconcileSummary {
 export async function reconcileCompanyOrders(companyId: string, maxPages?: number) {
   const query = maxPages != null ? `?maxPages=${maxPages}` : "";
   return (await apiFetch<DataEnvelope<ReconcileSummary>>(`/api/delivery-companies/${encodeURIComponent(companyId)}/reconcile-orders${query}`, { method: "POST" })).data;
+}
+
+// ─── Carrier-held Stock (EcoTrack) ─────────────────────────────────────────────
+
+export async function getCarrierProducts(companyId: string) {
+  return (
+    await apiFetch<DataEnvelope<CarrierProductsResult>>(
+      `/api/delivery-companies/${encodeURIComponent(companyId)}/carrier-products`,
+    )
+  ).data;
+}
+
+export async function syncCarrierStock(companyId: string) {
+  return (
+    await apiFetch<DataEnvelope<{ total: number; pagesFetched: number; syncedAt: string }>>(
+      `/api/delivery-companies/${encodeURIComponent(companyId)}/sync-carrier-stock`,
+      json({ method: "POST", body: "{}" }),
+    )
+  ).data;
 }
 
 // ─── Webhook Management ───────────────────────────────────────────────────────

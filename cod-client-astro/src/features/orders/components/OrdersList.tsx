@@ -1,20 +1,25 @@
-import { useDeferredValue, useEffect, useState } from "react";
-import { AlertCircle, Filter, PackageOpen, X } from "lucide-react";
+import { Fragment, useDeferredValue, useEffect, useState } from "react";
+import { AlertCircle, Calendar, Filter, PackageOpen, X } from "lucide-react";
 import { canScope, useIdentity } from "@/features/auth/components/RequireAuth";
 import { useT } from "@/i18n/react";
 import { ApiError } from "@/lib/api";
 import {
+  listAllOrders,
   listDeliveryCompanies,
   listDrivers,
-  listOrders,
 } from "@/features/orders/api";
 import {
   FILTER_STATUSES,
+  ORDER_GROUPS,
   filterOrders,
+  groupDuplicateOrders,
+  orderGroupCounts,
   paginateOrders,
   sortOrders,
   type OrderFilters,
+  type OrderGroupKey,
   type OrderSortKey,
+  type OrderUnit,
 } from "@/features/orders/model";
 import type {
   DeliveryCompany,
@@ -44,6 +49,8 @@ const EMPTY_FILTERS: OrderFilters = {
   delivery: "all",
   wilaya: "all",
   type: "all",
+  dateFrom: "",
+  dateTo: "",
 };
 
 function OrderSkeleton() {
@@ -117,9 +124,22 @@ export function OrdersList() {
   }));
   const [sortKey, setSortKey] = useState<OrderSortKey>("createdAt");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  const [group, setGroup] = useState<OrderGroupKey>("all");
+  const [showDuplicates, setShowDuplicates] = useState(false);
+  const [expandedUnits, setExpandedUnits] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number | "all">(() => {
+    try {
+      const stored = localStorage.getItem("codflow.orders.pageSize");
+      if (stored === "all") return "all";
+      const n = Number(stored);
+      if (n === 10 || n === 25 || n === 50 || n === 100) return n;
+    } catch {
+      /* localStorage unavailable — fall through to the default */
+    }
+    return 50;
+  });
   const deferredFilters = useDeferredValue(filters);
-  const pageSize = 10;
 
   async function load() {
     if (!canScope(identity, "orders:read")) return;
@@ -128,11 +148,11 @@ export function OrdersList() {
       const mayReadDelivery = canScope(identity, "delivery:read");
       const [orderResponse, companyResponse, driverResponse] =
         await Promise.all([
-          listOrders({ limit: 100, offset: 0 }),
+          listAllOrders(),
           mayReadDelivery ? listDeliveryCompanies(true) : Promise.resolve([]),
           mayReadDelivery ? listDrivers() : Promise.resolve([]),
         ]);
-      setOrders(orderResponse.data ?? []);
+      setOrders(orderResponse);
       setCompanies(companyResponse);
       setDrivers(driverResponse);
     } catch (cause) {
@@ -146,7 +166,7 @@ export function OrdersList() {
 
   useEffect(() => {
     setPage(1);
-  }, [deferredFilters, sortKey, sortDirection]);
+  }, [deferredFilters, sortKey, sortDirection, pageSize, group, showDuplicates]);
 
   if (!canScope(identity, "orders:read")) {
     return (
@@ -178,10 +198,32 @@ export function OrdersList() {
   if (orders === null) return <OrderSkeleton />;
 
   const filteredOrders = filterOrders(orders, deferredFilters);
-  const sortedOrders = sortOrders(filteredOrders, sortKey, sortDirection);
-  const totalPages = Math.max(1, Math.ceil(sortedOrders.length / pageSize));
+  const displayUnits: OrderUnit[] = showDuplicates
+    ? filteredOrders.map((order) => ({ primary: order, duplicates: [] }))
+    : groupDuplicateOrders(filteredOrders);
+  const groupCounts = orderGroupCounts(
+    displayUnits.map((unit) => unit.primary),
+  );
+  const groupStatuses =
+    ORDER_GROUPS.find((entry) => entry.key === group)?.statuses ?? null;
+  const groupedUnits = groupStatuses
+    ? displayUnits.filter((unit) => groupStatuses.includes(unit.primary.status))
+    : displayUnits;
+  const sortedPrimaries = sortOrders(
+    groupedUnits.map((unit) => unit.primary),
+    sortKey,
+    sortDirection,
+  );
+  const unitById = new Map(groupedUnits.map((unit) => [unit.primary.id, unit]));
+  const sortedUnits = sortedPrimaries.map((primary) => unitById.get(primary.id)!);
+  const effectivePageSize =
+    pageSize === "all" ? Math.max(1, sortedUnits.length) : pageSize;
+  const totalPages = Math.max(
+    1,
+    Math.ceil(sortedUnits.length / effectivePageSize),
+  );
   const safePage = Math.min(page, totalPages);
-  const visibleOrders = paginateOrders(sortedOrders, safePage, pageSize);
+  const visibleUnits = paginateOrders(sortedUnits, safePage, effectivePageSize);
   const wilayas = [
     ...new Set(orders.map((order) => order.wilaya).filter(Boolean)),
   ] as string[];
@@ -201,6 +243,25 @@ export function OrdersList() {
       setSortKey(cast);
       setSortDirection("asc");
     }
+  }
+
+  function changePageSize(value: string) {
+    const next = value === "all" ? "all" : Number(value);
+    setPageSize(next);
+    try {
+      localStorage.setItem("codflow.orders.pageSize", String(next));
+    } catch {
+      /* localStorage unavailable — keep the in-memory choice only */
+    }
+  }
+
+  function toggleUnit(id: string) {
+    setExpandedUnits((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   }
 
   const rowProps = {
@@ -227,15 +288,84 @@ export function OrdersList() {
       )}
       <Card flush>
         <div className="space-y-3 border-b border-border p-3">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div
+            role="tablist"
+            aria-label={t("groups_label")}
+            className="flex gap-1.5 overflow-x-auto pb-0.5 [scrollbar-width:none]"
+          >
+            {ORDER_GROUPS.map((entry) => {
+              const active = entry.key === group;
+              return (
+                <button
+                  key={entry.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => setGroup(entry.key)}
+                  className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                    active
+                      ? "border-brand/25 bg-brand/10 text-brand"
+                      : "border-input bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
+                  }`}
+                >
+                  {t(`groups.${entry.key}`)}
+                  <span
+                    className={`rounded-full px-1.5 text-[10.5px] tabular-nums ${
+                      active
+                        ? "bg-brand/15 text-brand"
+                        : "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    {groupCounts[entry.key]}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <SearchInput
               value={filters.query}
               onChange={(query) => setFilter("query", query)}
               placeholder={t("search_placeholder")}
             />
-            <span className="shrink-0 text-xs font-medium text-muted-foreground">
-              {filteredOrders.length} {t("orders_count")}
-            </span>
+            <div className="flex shrink-0 items-center gap-3">
+              <span className="text-xs font-medium text-muted-foreground">
+                {sortedUnits.length} {t("orders_count")}
+              </span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={showDuplicates}
+                onClick={() => setShowDuplicates((value) => !value)}
+                className={`inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold transition-colors ${
+                  showDuplicates
+                    ? "border-brand/25 bg-brand/10 text-brand"
+                    : "border-input bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
+                }`}
+              >
+                {t("duplicates.toggle")}
+              </button>
+              <div className="flex items-center gap-2 rounded-lg border border-input bg-background px-3">
+                <span className="shrink-0 text-xs font-medium text-muted-foreground">
+                  {t("per_page_label")}
+                </span>
+                <Select
+                  aria-label={t("per_page_label")}
+                  value={String(pageSize)}
+                  onChange={(event) => changePageSize(event.currentTarget.value)}
+                  variant="bare"
+                  size="sm"
+                  wrapperClassName="w-16"
+                  triggerClassName="w-16"
+                >
+                  <option value="10">10</option>
+                  <option value="25">25</option>
+                  <option value="50">50</option>
+                  <option value="100">100</option>
+                  <option value="all">{common("table.all")}</option>
+                </Select>
+              </div>
+            </div>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             <FilterSelect
@@ -283,6 +413,34 @@ export function OrdersList() {
                 ))}
               </FilterSelect>
             )}
+            <label className="relative flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-input bg-background px-3 sm:flex-none">
+              <Calendar
+                size={14}
+                aria-hidden="true"
+                className="shrink-0 text-muted-foreground"
+              />
+              <input
+                type="date"
+                value={filters.dateFrom}
+                onChange={(event) => setFilter("dateFrom", event.currentTarget.value)}
+                aria-label={t("filters.date_from")}
+                className="h-9 min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none"
+              />
+            </label>
+            <label className="relative flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-input bg-background px-3 sm:flex-none">
+              <Calendar
+                size={14}
+                aria-hidden="true"
+                className="shrink-0 text-muted-foreground"
+              />
+              <input
+                type="date"
+                value={filters.dateTo}
+                onChange={(event) => setFilter("dateTo", event.currentTarget.value)}
+                aria-label={t("filters.date_to")}
+                className="h-9 min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none"
+              />
+            </label>
             {hasFilters && (
               <button
                 type="button"
@@ -295,15 +453,21 @@ export function OrdersList() {
           </div>
         </div>
 
-        {filteredOrders.length === 0 ? (
+        {sortedUnits.length === 0 ? (
           <EmptyState
             icon={<PackageOpen size={22} />}
             title={
-              hasFilters ? common("no_results_found") : t("empty_state.title")
+              hasFilters || group !== "all"
+                ? common("no_results_found")
+                : t("empty_state.title")
             }
-            description={hasFilters ? undefined : t("empty_state.description")}
+            description={
+              hasFilters || group !== "all"
+                ? undefined
+                : t("empty_state.description")
+            }
             action={
-              !hasFilters && canScope(identity, "orders:create") ? (
+              !hasFilters && group === "all" && canScope(identity, "orders:create") ? (
                 <LinkButton href="/orders/new">
                   {t("empty_state.action")}
                 </LinkButton>
@@ -313,13 +477,30 @@ export function OrdersList() {
         ) : (
           <>
             <div className="divide-y divide-border md:hidden">
-              {visibleOrders.map((order) => (
-                <OrderMobileCard key={order.id} order={order} {...rowProps} />
+              {visibleUnits.map((unit) => (
+                <Fragment key={unit.primary.id}>
+                  <OrderMobileCard
+                    order={unit.primary}
+                    {...rowProps}
+                    duplicateCount={unit.duplicates.length}
+                    duplicatesExpanded={expandedUnits.has(unit.primary.id)}
+                    onToggleDuplicates={() => toggleUnit(unit.primary.id)}
+                  />
+                  {expandedUnits.has(unit.primary.id) &&
+                    unit.duplicates.map((duplicate) => (
+                      <OrderMobileCard
+                        key={duplicate.id}
+                        order={duplicate}
+                        {...rowProps}
+                        duplicate
+                      />
+                    ))}
+                </Fragment>
               ))}
             </div>
 
             <div className="hidden overflow-x-auto md:block">
-              <Table className="min-w-[940px]">
+              <Table className="min-w-[1040px]">
                 <TableHeader>
                   <TableRow className="text-xs font-semibold text-muted-foreground">
                     <SortHeader
@@ -364,26 +545,52 @@ export function OrdersList() {
                       onSort={handleSort}
                       align="end"
                     />
+                    <SortHeader
+                      label={t("table.date")}
+                      sortKey="createdAt"
+                      activeKey={sortKey}
+                      direction={sortDirection}
+                      onSort={handleSort}
+                    />
                     <TableHead className="w-12">
                       <span className="sr-only">{common("table.actions")}</span>
                     </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {visibleOrders.map((order) => (
-                    <OrderDesktopRow key={order.id} order={order} {...rowProps} />
+                  {visibleUnits.map((unit) => (
+                    <Fragment key={unit.primary.id}>
+                      <OrderDesktopRow
+                        order={unit.primary}
+                        {...rowProps}
+                        duplicateCount={unit.duplicates.length}
+                        duplicatesExpanded={expandedUnits.has(unit.primary.id)}
+                        onToggleDuplicates={() => toggleUnit(unit.primary.id)}
+                      />
+                      {expandedUnits.has(unit.primary.id) &&
+                        unit.duplicates.map((duplicate) => (
+                          <OrderDesktopRow
+                            key={duplicate.id}
+                            order={duplicate}
+                            {...rowProps}
+                            duplicate
+                          />
+                        ))}
+                    </Fragment>
                   ))}
                 </TableBody>
               </Table>
             </div>
 
-            <Pagination
-              page={safePage}
-              totalPages={totalPages}
-              total={sortedOrders.length}
-              pageSize={pageSize}
-              onPageChange={setPage}
-            />
+            {totalPages > 1 && (
+              <Pagination
+                page={safePage}
+                totalPages={totalPages}
+                total={sortedUnits.length}
+                pageSize={effectivePageSize}
+                onPageChange={setPage}
+              />
+            )}
           </>
         )}
       </Card>

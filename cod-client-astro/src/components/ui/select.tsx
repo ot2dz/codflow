@@ -14,7 +14,7 @@ import {
   type SelectHTMLAttributes,
 } from "react";
 import { createPortal } from "react-dom";
-import { Check, ChevronDown } from "lucide-react";
+import { Check, ChevronDown, Search } from "lucide-react";
 
 export type SelectVariant = "default" | "bare" | "inverted" | "pill";
 export type SelectSize = "default" | "sm";
@@ -33,9 +33,14 @@ interface SelectProps
   prefix?: ReactNode;
   value?: string | number;
   onChange?: (event: ChangeEvent<HTMLSelectElement>) => void;
+  /** Show a type-to-filter search box at the top of the dropdown. */
+  searchable?: boolean;
+  searchPlaceholder?: string;
+  noResultsText?: string;
 }
 
 type Option = { value: string; label: string; disabled: boolean };
+type OptionEntry = { option: Option; index: number };
 
 function parseOptions(children: ReactNode): Option[] {
   return Children.toArray(children)
@@ -95,6 +100,9 @@ export function Select({
   prefix,
   value: rawValue,
   onChange,
+  searchable = false,
+  searchPlaceholder = "Search…",
+  noResultsText = "No results",
   "aria-label": ariaLabel,
   "aria-invalid": ariaInvalid,
   "aria-describedby": ariaDescribedBy,
@@ -105,6 +113,7 @@ export function Select({
   const options = useMemo(() => parseOptions(children), [children]);
   const [open, setOpen] = useState(false);
   const [openUp, setOpenUp] = useState(false);
+  const [query, setQuery] = useState("");
   const [pos, setPos] = useState<{
     left: number;
     top: number;
@@ -114,8 +123,18 @@ export function Select({
   const rootId = useId();
   const wrapperRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const panelRef = useRef<HTMLUListElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
   const hiddenRef = useRef<HTMLSelectElement>(null);
+
+  const visible = useMemo<OptionEntry[]>(() => {
+    const entries = options.map((option, index) => ({ option, index }));
+    const needle = query.trim().toLowerCase();
+    if (!searchable || !needle) return entries;
+    return entries.filter((entry) =>
+      entry.option.label.toLowerCase().includes(needle),
+    );
+  }, [options, searchable, query]);
 
   const selectedIndex = options.findIndex((option) => option.value === value);
   const placeholder = options.find((option) => option.value === "");
@@ -127,14 +146,24 @@ export function Select({
         ? placeholder!.label
         : value;
 
+  function positionFromTrigger(): boolean {
+    const trigger = triggerRef.current;
+    if (!trigger) return false;
+    const rect = trigger.getBoundingClientRect();
+    // The trigger scrolled out of view → no anchor to hold onto.
+    if (rect.bottom < 0 || rect.top > window.innerHeight) {
+      setOpen(false);
+      return false;
+    }
+    setPos({ left: rect.left, top: rect.bottom + 6, width: rect.width });
+    setOpenUp(false);
+    return true;
+  }
+
   function openDropdown() {
     if (rest.disabled) return;
-    const trigger = triggerRef.current;
-    if (trigger) {
-      const rect = trigger.getBoundingClientRect();
-      setPos({ left: rect.left, top: rect.bottom + 6, width: rect.width });
-      setOpenUp(false);
-    }
+    positionFromTrigger();
+    setQuery("");
     setOpen(true);
   }
 
@@ -150,7 +179,11 @@ export function Select({
     return () => document.removeEventListener("pointerdown", onPointerDown);
   }, [open]);
 
-  // Close only on external scroll/resize so internal list scrolling works smoothly
+  // Keep the floating panel glued to its trigger on external scroll/resize —
+  // including the mobile on-screen keyboard, which resizes the viewport when
+  // the search box is focused. Closing on that resize made the dropdown vanish
+  // on phones; it now repositions instead, and only closes when the trigger
+  // itself scrolls out of view.
   useEffect(() => {
     if (!open) return;
     const onScroll = (event: Event) => {
@@ -162,24 +195,37 @@ export function Select({
       ) {
         return;
       }
-      setOpen(false);
+      positionFromTrigger();
     };
-    const onResize = () => setOpen(false);
+    const onResize = () => {
+      positionFromTrigger();
+    };
     window.addEventListener("scroll", onScroll, true);
     window.addEventListener("resize", onResize);
+    window.visualViewport?.addEventListener("resize", onResize);
+    window.visualViewport?.addEventListener("scroll", onResize);
     return () => {
       window.removeEventListener("scroll", onScroll, true);
       window.removeEventListener("resize", onResize);
+      window.visualViewport?.removeEventListener("resize", onResize);
+      window.visualViewport?.removeEventListener("scroll", onResize);
     };
   }, [open]);
 
   useEffect(() => {
+    if (open && searchable) {
+      searchRef.current?.focus({ preventScroll: true });
+    }
+  }, [open, searchable]);
+
+  useEffect(() => {
     if (open) {
-      setActiveIndex(selectedIndex >= 0 ? selectedIndex : 0);
+      const idx = visible.findIndex((entry) => entry.option.value === value);
+      setActiveIndex(idx >= 0 ? idx : 0);
     } else {
       setActiveIndex(-1);
     }
-  }, [open, selectedIndex]);
+  }, [open, visible, value]);
 
   useEffect(() => {
     if (!open || !panelRef.current || !pos) return;
@@ -209,7 +255,7 @@ export function Select({
       setPos({ left, top, width: pos.width });
       setOpenUp(up);
     }
-  }, [open, pos, openUp]);
+  }, [open, pos, openUp, visible.length]);
 
   useEffect(() => {
     if (!open) return;
@@ -219,30 +265,22 @@ export function Select({
   }, [activeIndex, open]);
 
   function commit(index: number) {
-    const option = options[index];
-    if (!option || option.disabled) return;
+    const entry = visible[index];
+    if (!entry || entry.option.disabled) return;
     setOpen(false);
-    if (hiddenRef.current) hiddenRef.current.value = option.value;
+    if (hiddenRef.current) hiddenRef.current.value = entry.option.value;
     onChange?.({
-      currentTarget: { value: option.value },
-      target: { value: option.value },
+      currentTarget: { value: entry.option.value },
+      target: { value: entry.option.value },
     } as ChangeEvent<HTMLSelectElement>);
     triggerRef.current?.focus();
   }
 
-  function onTriggerKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
-    if (rest.disabled) return;
-    if (!open) {
-      if (["ArrowDown", "ArrowUp", "Enter", " "].includes(event.key)) {
-        event.preventDefault();
-        openDropdown();
-      }
-      return;
-    }
+  function navigate(event: KeyboardEvent<HTMLElement>) {
     switch (event.key) {
       case "ArrowDown":
         event.preventDefault();
-        setActiveIndex((index) => Math.min(index + 1, options.length - 1));
+        setActiveIndex((index) => Math.min(index + 1, visible.length - 1));
         break;
       case "ArrowUp":
         event.preventDefault();
@@ -254,10 +292,9 @@ export function Select({
         break;
       case "End":
         event.preventDefault();
-        setActiveIndex(options.length - 1);
+        setActiveIndex(visible.length - 1);
         break;
       case "Enter":
-      case " ":
         event.preventDefault();
         if (activeIndex >= 0) commit(activeIndex);
         break;
@@ -272,9 +309,23 @@ export function Select({
     }
   }
 
+  function onTriggerKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
+    if (rest.disabled) return;
+    if (!open) {
+      if (["ArrowDown", "ArrowUp", "Enter", " "].includes(event.key)) {
+        event.preventDefault();
+        openDropdown();
+      } else if (searchable && event.key.length === 1) {
+        openDropdown();
+      }
+      return;
+    }
+    navigate(event);
+  }
+
   const panel = open ? (
     createPortal(
-      <ul
+      <div
         ref={panelRef}
         id={`${rootId}-listbox`}
         role="listbox"
@@ -284,47 +335,75 @@ export function Select({
             ? { left: pos.left, top: pos.top, width: Math.max(pos.width, 180) }
             : undefined
         }
-        className="fixed z-[80] max-h-72 overflow-y-auto overscroll-contain rounded-xl border border-border/80 bg-popover p-1 text-popover-foreground shadow-xl shadow-black/10 backdrop-blur-md animate-in fade-in-0 zoom-in-95 duration-150"
+        className="fixed z-[80] flex max-h-72 flex-col overflow-hidden rounded-xl border border-border/80 bg-popover p-1 text-popover-foreground shadow-xl shadow-black/10 backdrop-blur-md animate-in fade-in-0 zoom-in-95 duration-150"
       >
-        {options.map((option, index) => {
-          const isSelected = option.value === value;
-          const isActive = index === activeIndex;
-          return (
-            <li
-              key={option.value}
-              id={`${rootId}-opt-${index}`}
-              role="option"
-              aria-selected={isSelected}
-              aria-disabled={option.disabled || undefined}
-              data-option-index={index}
-              onMouseEnter={() => setActiveIndex(index)}
-              onMouseDown={(event: MouseEvent<HTMLLIElement>) => {
-                event.preventDefault();
-                commit(index);
-              }}
-              className={`flex min-h-[34px] cursor-pointer items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-[13px] font-medium outline-none transition-colors ${
-                isActive ? "bg-muted/80 text-foreground" : ""
-              } ${
-                isSelected
-                  ? "bg-brand/[0.08] font-semibold text-brand dark:bg-brand/15 dark:text-brand"
-                  : "text-foreground/85"
-              } ${option.disabled ? "cursor-not-allowed opacity-40" : ""}`}
-            >
-              <span className="min-w-0 flex-1 truncate text-start">
-                {option.label}
-              </span>
-              {isSelected && (
-                <Check
-                  size={14}
-                  strokeWidth={2.2}
-                  className="shrink-0 text-brand"
-                  aria-hidden="true"
-                />
-              )}
-            </li>
-          );
-        })}
-      </ul>,
+        {searchable && (
+          <div className="relative mb-1 shrink-0">
+            <Search
+              size={14}
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-y-0 start-2.5 my-auto text-muted-foreground/70"
+            />
+            <input
+              ref={searchRef}
+              type="text"
+              value={query}
+              onChange={(event) => setQuery(event.currentTarget.value)}
+              onKeyDown={navigate}
+              placeholder={searchPlaceholder}
+              aria-label={searchPlaceholder}
+              autoComplete="off"
+              className="h-9 w-full rounded-lg border border-input/60 bg-background ps-8 pe-3 text-[13px] font-medium text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20"
+            />
+          </div>
+        )}
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+          {visible.map((entry, index) => {
+            const option = entry.option;
+            const isSelected = option.value === value;
+            const isActive = index === activeIndex;
+            return (
+              <div
+                key={option.value}
+                id={`${rootId}-opt-${index}`}
+                role="option"
+                aria-selected={isSelected}
+                aria-disabled={option.disabled || undefined}
+                data-option-index={index}
+                onMouseEnter={() => setActiveIndex(index)}
+                onMouseDown={(event: MouseEvent<HTMLDivElement>) => {
+                  event.preventDefault();
+                  commit(index);
+                }}
+                className={`flex min-h-[34px] cursor-pointer items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-[13px] font-medium outline-none transition-colors ${
+                  isActive ? "bg-muted/80 text-foreground" : ""
+                } ${
+                  isSelected
+                    ? "bg-brand/[0.08] font-semibold text-brand dark:bg-brand/15 dark:text-brand"
+                    : "text-foreground/85"
+                } ${option.disabled ? "cursor-not-allowed opacity-40" : ""}`}
+              >
+                <span className="min-w-0 flex-1 truncate text-start">
+                  {option.label}
+                </span>
+                {isSelected && (
+                  <Check
+                    size={14}
+                    strokeWidth={2.2}
+                    className="shrink-0 text-brand"
+                    aria-hidden="true"
+                  />
+                )}
+              </div>
+            );
+          })}
+          {searchable && visible.length === 0 && (
+            <p className="px-3 py-6 text-center text-[13px] font-medium text-muted-foreground">
+              {noResultsText}
+            </p>
+          )}
+        </div>
+      </div>,
       document.body,
     )
   ) : null;

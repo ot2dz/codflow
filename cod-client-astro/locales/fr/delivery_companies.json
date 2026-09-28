@@ -139,5 +139,21 @@
   "events_load_failed": "Impossible de charger les événements",
   "events_empty": "Aucun événement pour l'instant",
   "events_empty_filtered": "Aucun événement avec ce résultat",
-  "events_empty_hint": "Les événements arrivent quand le transporteur pousse des mises à jour. Enregistrez d'abord le webhook — voir la page des identifiants."
+  "events_empty_hint": "Les événements arrivent quand le transporteur pousse des mises à jour. Enregistrez d'abord le webhook — voir la page des identifiants.",
+  "carrier_stock_title": "Stock de l'entrepôt transporteur",
+  "carrier_stock_subtitle": "Produits détenus en stock par le transporteur. Lecture seule — l'actualisation ne bloque jamais l'expédition.",
+  "carrier_stock_refresh": "Actualiser",
+  "carrier_stock_empty": "Aucun stock transporteur pour l'instant",
+  "carrier_stock_empty_hint": "Utilisez Actualiser pour récupérer le stock du transporteur.",
+  "carrier_stock_synced": "Stock transporteur mis à jour",
+  "carrier_stock_synced_at": "Dernière mise à jour",
+  "carrier_stock_col_reference": "Référence",
+  "carrier_stock_col_title": "Produit",
+  "carrier_stock_col_available": "Disponible",
+  "carrier_stock_col_reserved": "Réservé",
+  "carrier_stock_col_physical": "Physique",
+  "stock_fulfillment_title": "Préparation depuis le stock transporteur",
+  "stock_fulfillment_hint": "L'expédition envoie stock=1 au transporteur en utilisant le SKU de chaque ligne. Le transporteur refuse les colis sans stock ; votre stock local n'est pas affecté.",
+  "stock_fulfillment_on": "Préparation depuis le stock transporteur activée",
+  "stock_fulfillment_off": "Préparation depuis le stock transporteur désactivée"
 }

@@ -28,6 +28,8 @@ export const createDeliveryCompanySchema = z.object({
    * (false for EcoTrack-family carriers, true for everyone else).
    */
   autoValidate: z.boolean().optional(),
+  /** Dispatch fulfils from stock the carrier holds (EcoTrack stock=1). */
+  stockFulfillment: z.boolean().optional(),
 
   notes: z.string().optional().nullable(),
 });
@@ -50,6 +52,8 @@ export const updateDeliveryCompanySchema = z.object({
   supportsTracking: z.boolean().optional(),
   /** Toggle the post-dispatch auto-validate behavior. See create schema for semantics. */
   autoValidate: z.boolean().optional(),
+  /** Dispatch fulfils from stock the carrier holds (EcoTrack stock=1). */
+  stockFulfillment: z.boolean().optional(),
   notes: z.string().optional().nullable(),
 });
 

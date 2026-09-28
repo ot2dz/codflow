@@ -394,3 +394,30 @@ export type EcotrackBulkCreateResult = {
     | Record<string, string[]>
   >;
 };
+
+// ─── Products List (carrier-held stock) ───────────────────────────────────────
+// GET /api/v1/get/products/list?page=  — Laravel paginated, 15/page.
+// Response: { "products": [ { reference, barcode, title, is_active, image,
+//   stock_disponible, stock_reserve, stock_phisique } ], "pagination": {…} }
+// Numbers may arrive as strings; callers coerce defensively.
+
+export interface EcotrackCarrierProduct {
+  reference?: string;
+  barcode?: string | null;
+  title?: string | null;
+  is_active?: boolean | number;
+  image?: string | null;
+  stock_disponible?: number | string | null;
+  stock_reserve?: number | string | null;
+  stock_phisique?: number | string | null;
+}
+
+export interface EcotrackProductsListResponse {
+  products?: EcotrackCarrierProduct[];
+  pagination?: {
+    current_page?: number;
+    last_page?: number;
+    per_page?: number;
+    total?: number;
+  };
+}

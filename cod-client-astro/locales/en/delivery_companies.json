@@ -139,5 +139,21 @@
   "events_load_failed": "Could not load events",
   "events_empty": "No events yet",
   "events_empty_filtered": "No events with this outcome",
-  "events_empty_hint": "Events arrive when the carrier pushes status updates. Register or set up the webhook first — see the credentials page."
+  "events_empty_hint": "Events arrive when the carrier pushes status updates. Register or set up the webhook first — see the credentials page.",
+  "carrier_stock_title": "Carrier Warehouse Stock",
+  "carrier_stock_subtitle": "Products the carrier holds in its own stock. Display-only — syncing never blocks dispatch.",
+  "carrier_stock_refresh": "Refresh",
+  "carrier_stock_empty": "No carrier stock yet",
+  "carrier_stock_empty_hint": "Use Refresh to pull the carrier's product stock.",
+  "carrier_stock_synced": "Carrier stock updated",
+  "carrier_stock_synced_at": "Last updated",
+  "carrier_stock_col_reference": "Reference",
+  "carrier_stock_col_title": "Product",
+  "carrier_stock_col_available": "Available",
+  "carrier_stock_col_reserved": "Reserved",
+  "carrier_stock_col_physical": "Physical",
+  "stock_fulfillment_title": "Fulfil from carrier stock",
+  "stock_fulfillment_hint": "Dispatch sends this carrier stock=1 using each order line's SKU. The carrier refuses out-of-stock parcels; your local inventory is not affected.",
+  "stock_fulfillment_on": "Fulfilment from carrier stock enabled",
+  "stock_fulfillment_off": "Fulfilment from carrier stock disabled"
 }

@@ -403,10 +403,47 @@ export const deliveryCompanies = sqliteTable("delivery_companies", {
    */
   autoValidate: integer("auto_validate", { mode: "boolean" }).notNull().default(true),
 
+  /**
+   * When true, orders dispatched to this carrier are fulfilled from stock the
+   * carrier holds (EcoTrack `stock=1`), using each order line's SKU as the
+   * carrier product reference. The carrier refuses the parcel when its own
+   * stock is insufficient — CodFlow surfaces that error; there is no local
+   * pre-check. Local CodFlow inventory is unaffected.
+   */
+  stockFulfillment: integer("stock_fulfillment", { mode: "boolean" })
+    .notNull()
+    .default(false),
+
   notes: text("notes"),
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
 });
+
+/**
+ * Read-only mirror of the products a carrier holds in stock (EcoTrack
+ * `get/products/list`). Displayed in the dashboard so the merchant can see the
+ * carrier's on-hand quantities. `reference` is matched against our SKUs. This
+ * is a cache refreshed on demand — never a dispatch-time gate.
+ */
+export const carrierProducts = sqliteTable("carrier_products", {
+  id: text("id").primaryKey(),
+  companyId: text("company_id")
+    .notNull()
+    .references(() => deliveryCompanies.id, { onDelete: "cascade" }),
+  /** Carrier product reference — matched against our SKU. */
+  reference: text("reference").notNull(),
+  barcode: text("barcode"),
+  title: text("title"),
+  isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+  image: text("image"),
+  stockDisponible: integer("stock_disponible").notNull().default(0),
+  stockReserve: integer("stock_reserve").notNull().default(0),
+  stockPhysique: integer("stock_physique").notNull().default(0),
+  syncedAt: text("synced_at").notNull(),
+}, (t) => ({
+  companyReferenceUnique: uniqueIndex("carrier_products_company_reference_unique")
+    .on(t.companyId, t.reference),
+}));
 
 // ─── Orders ───────────────────────────────────────────────────────────────────
 

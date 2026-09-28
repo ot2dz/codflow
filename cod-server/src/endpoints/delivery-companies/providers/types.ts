@@ -42,6 +42,32 @@ export interface CreateShipmentInput {
   weight?: number;
   /** Whether the parcel contains fragile items (optional). */
   fragile?: boolean;
+  /**
+   * Stock-fulfilled lines. When set, providers that support carrier-held stock
+   * (EcoTrack) prepare the parcel from the carrier's own warehouse stock:
+   * `reference` is the carrier product reference (= our SKU), `quantity` the
+   * units to pick. The carrier refuses the parcel when its stock is
+   * insufficient — there is no CodFlow-side pre-check.
+   */
+  stockProducts?: Array<{ reference: string; quantity: number }>;
+}
+
+/** A product the carrier holds in stock (EcoTrack `get/products/list`). */
+export interface CarrierProduct {
+  reference: string;
+  barcode?: string | null;
+  title?: string | null;
+  isActive?: boolean;
+  image?: string | null;
+  stockDisponible: number;
+  stockReserve: number;
+  stockPhysique: number;
+}
+
+export interface CarrierProductsPage {
+  products: CarrierProduct[];
+  page: number;
+  lastPage: number;
 }
 
 export interface CreateShipmentResult {
@@ -199,4 +225,11 @@ export interface DeliveryProvider {
     wilayas: Array<{ id: number; name: string }>;
     communes: Array<{ id: number; name: string; wilayaId: number }>;
   }>;
+
+  /**
+   * Fetch the products the carrier holds in its own stock (display-only mirror
+   * for the dashboard). Not all providers offer carrier-held stock — check
+   * before calling.
+   */
+  getProducts?(page?: number): Promise<CarrierProductsPage>;
 }

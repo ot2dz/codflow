@@ -17,6 +17,7 @@ import type { AuthUser } from "@/types";
 export const ACTIONS = {
   // Orders
   ORDER_CREATED:           "order.created",
+  ORDER_UPDATED:           "order.updated",
   ORDER_STATUS_CHANGED:    "order.status_changed",
   ORDER_DRIVER_ASSIGNED:   "order.driver_assigned",
   ORDER_DISPATCHED:        "order.dispatched",
@@ -73,6 +74,7 @@ export const ACTIONS = {
   // Users / Team
   USER_CREATED:            "user.created",
   USER_UPDATED:            "user.updated",
+  USER_PASSWORD_RESET:     "user.password_reset",
   USER_ROLE_CHANGED:       "user.role_changed",
   USER_SCOPE_GRANTED:      "user.scope_granted",
   USER_SCOPE_REVOKED:      "user.scope_revoked",

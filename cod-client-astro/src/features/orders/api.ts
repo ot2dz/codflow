@@ -45,12 +45,41 @@ export function listOrders(params: { limit?: number; offset?: number; search?: s
   return apiFetch<ListEnvelope<OrderListItem>>(`/api/orders?${query}`);
 }
 
+/**
+ * Fetch every order by paging the API (the server caps a request at 100 rows).
+ * The list is sorted newest-first server-side, so paging is stable. Capped at
+ * 5000 rows to keep a runaway store from hanging the browser.
+ */
+export async function listAllOrders() {
+  const rows: OrderListItem[] = [];
+  const limit = 100;
+  for (let offset = 0; offset < 5000; offset += limit) {
+    const response = await listOrders({ limit, offset });
+    const batch = response.data ?? [];
+    rows.push(...batch);
+    if (batch.length < limit) break;
+  }
+  return rows;
+}
+
 export async function getOrder(id: string) {
   return (await apiFetch<DataEnvelope<OrderDetail>>(`/api/orders/${encodeURIComponent(id)}`)).data;
 }
 
-export function updateOrderStatus(id: string, status: string) {
-  return apiFetch<DataEnvelope<null>>(`/api/orders/${encodeURIComponent(id)}/status`, json({ method: "PATCH", body: JSON.stringify({ status }) }));
+export function updateOrderStatus(
+  id: string,
+  status: string,
+  options: { override?: boolean } = {},
+) {
+  return apiFetch<DataEnvelope<null>>(
+    `/api/orders/${encodeURIComponent(id)}/status`,
+    json({
+      method: "PATCH",
+      body: JSON.stringify(
+        options.override ? { status, override: true } : { status },
+      ),
+    }),
+  );
 }
 
 export function deleteOrder(id: string) {
@@ -71,6 +100,52 @@ export function validateShipment(id: string) {
 
 export function updateShipment(id: string, body: Record<string, unknown>) {
   return apiFetch<DataEnvelope<null>>(`/api/orders/${encodeURIComponent(id)}/update-shipment`, json({ method: "PATCH", body: JSON.stringify(body) }));
+}
+
+export interface UpdateOrderLineBody {
+  id: string;
+  /** Replace the line's product/variant (optional — keeps the current one). */
+  productId?: string;
+  variantId?: string | null;
+  quantity?: number;
+  pricePerUnit?: number;
+}
+
+export interface UpdateOrderBody {
+  customerName?: string;
+  phone?: string;
+  wilayaId?: number;
+  communeId?: string;
+  address?: string | null;
+  deliveryType?: "home" | "stop_desk";
+  notes?: string | null;
+  /** Per-line product/quantity edits (authoritative when present). */
+  products?: UpdateOrderLineBody[];
+  /** Single-line shorthand: total units. */
+  quantity?: number;
+  /** Single-line shorthand: grand total including delivery. */
+  total?: number;
+}
+
+export function updateOrder(id: string, body: UpdateOrderBody) {
+  return apiFetch<DataEnvelope<OrderDetail>>(
+    `/api/orders/${encodeURIComponent(id)}`,
+    json({ method: "PATCH", body: JSON.stringify(body) }),
+  );
+}
+
+export interface AddOrderProductBody {
+  productId: string;
+  variantId?: string | null;
+  quantity: number;
+  pricePerUnit?: number;
+}
+
+export function addOrderProduct(id: string, body: AddOrderProductBody) {
+  return apiFetch<DataEnvelope<OrderDetail>>(
+    `/api/orders/${encodeURIComponent(id)}/products`,
+    json({ method: "POST", body: JSON.stringify(body) }),
+  );
 }
 
 export function cancelShipment(id: string) {

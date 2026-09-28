@@ -13,6 +13,13 @@ import * as queries from "./queries";
 
 const mockDb = {
   select: vi.fn(),
+  update: vi.fn(() => ({
+    set: vi.fn(() => ({
+      where: vi.fn(() => ({
+        returning: vi.fn(async () => [{ id: "acc_1" }]),
+      })),
+    })),
+  })),
 } as any;
 
 vi.mock("@/db", () => ({
@@ -28,6 +35,7 @@ vi.mock("@/lib/activity", () => ({
   ACTIONS: {
     USER_CREATED: "user.created",
     USER_UPDATED: "user.updated",
+    USER_PASSWORD_RESET: "user.password_reset",
     USER_ROLE_CHANGED: "user.role_changed",
     USER_SCOPE_GRANTED: "user.scope_granted",
     USER_SCOPE_REVOKED: "user.scope_revoked",
@@ -380,6 +388,34 @@ describe("Users routes (OpenAPIHono)", () => {
       vi.mocked(queries.getUserById).mockResolvedValue(null);
 
       const res = await app.request("/api/users/user_missing/api-key/rotate", {
+        method: "POST",
+      });
+
+      expect(res.status).toBe(404);
+    });
+  });
+
+  describe("POST /api/users/{id}/reset-password", () => {
+    it("resets the credential password and returns a one-time temp password", async () => {
+      vi.mocked(queries.getUserById).mockResolvedValue(userRow());
+
+      const res = await app.request(
+        "/api/users/a1b2c3d4e5f6a7b8a1b2c3d4e5f6a7b8/reset-password",
+        { method: "POST" },
+      );
+
+      expect(res.status).toBe(200);
+      const body: any = await res.json();
+      expect(body.success).toBe(true);
+      expect(typeof body.data.tempPassword).toBe("string");
+      expect(body.data.tempPassword.length).toBeGreaterThanOrEqual(20);
+      expect(mockDb.update).toHaveBeenCalled();
+    });
+
+    it("returns 404 when the user does not exist", async () => {
+      vi.mocked(queries.getUserById).mockResolvedValue(null);
+
+      const res = await app.request("/api/users/user_missing/reset-password", {
         method: "POST",
       });
 

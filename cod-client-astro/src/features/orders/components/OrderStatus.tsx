@@ -5,7 +5,7 @@ import { useT } from "@/i18n/react";
 import { notify } from "@/lib/notify";
 import { useConfirmDialog, Select } from "@/components/ui";
 import { updateOrderStatus } from "@/features/orders/api";
-import { orderStatusOptions } from "@/features/orders/model";
+import { FILTER_STATUSES } from "@/features/orders/model";
 import type { OrderListItem } from "@/features/orders/types";
 
 function statusClass(status: string): string {
@@ -54,7 +54,7 @@ export function OrderStatus({
   const common = useT("common");
   const confirm = useConfirmDialog();
   const [busy, setBusy] = useState(false);
-  const statusOptions = orderStatusOptions(order.status);
+  const statusOptions = FILTER_STATUSES;
 
   async function changeStatus(status: string) {
     if (status === order.status) return;
@@ -78,7 +78,7 @@ export function OrderStatus({
     }
     setBusy(true);
     try {
-      await updateOrderStatus(order.id, status);
+      await updateOrderStatus(order.id, status, { override: true });
     } catch (cause) {
       onError(cause instanceof Error ? cause.message : String(cause));
       notify.error(t("detail.error_status"));
@@ -100,7 +100,7 @@ export function OrderStatus({
     }
   }
 
-  if (!canScope(identity, "orders:update") || statusOptions.length === 1) {
+  if (!canScope(identity, "orders:update")) {
     return (
       <span
         className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold leading-5 ${statusClass(order.status)}`}

@@ -1,5 +1,5 @@
-import { MapPin, PackageOpen, Star } from "lucide-react";
-import { useLocale } from "@/i18n/react";
+import { ChevronDown, MapPin, PackageOpen, Star } from "lucide-react";
+import { useLocale, useT } from "@/i18n/react";
 import {
   TableCell,
   TableRow,
@@ -20,25 +20,89 @@ interface RowProps {
   companies: DeliveryCompany[];
   onChanged: () => void | Promise<void>;
   onError: (message: string) => void;
+  /** A hidden duplicate revealed under its primary row. */
+  duplicate?: boolean;
+  /** Primary row: how many duplicates are collapsed beneath it. */
+  duplicateCount?: number;
+  /** Primary row: whether the duplicates are currently shown. */
+  duplicatesExpanded?: boolean;
+  onToggleDuplicates?: () => void;
 }
 
-export function OrderDesktopRow({ order, drivers, companies, onChanged, onError }: RowProps) {
-  const locale = useLocale();
+function DuplicateToggle({
+  count,
+  expanded,
+  onToggle,
+}: {
+  count: number;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  const t = useT("orders");
+  if (count <= 0) return null;
   return (
-    <TableRow className="border-b border-border last:border-0 transition-colors hover:bg-muted/40">
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={expanded}
+      className="inline-flex items-center gap-1 rounded-full border border-[var(--status-preparing-border)] bg-[var(--status-preparing-bg)] px-2 py-0.5 text-[10.5px] font-semibold text-[var(--status-preparing-text)]"
+    >
+      {t("duplicates.badge").replace("{count}", String(count + 1))}
+      <ChevronDown
+        size={11}
+        className={`transition-transform ${expanded ? "rotate-180" : ""}`}
+      />
+    </button>
+  );
+}
+
+export function OrderDesktopRow({
+  order,
+  drivers,
+  companies,
+  onChanged,
+  onError,
+  duplicate = false,
+  duplicateCount = 0,
+  duplicatesExpanded = false,
+  onToggleDuplicates,
+}: RowProps) {
+  const locale = useLocale();
+  const t = useT("orders");
+  return (
+    <TableRow
+      className={`border-b border-border last:border-0 transition-colors ${
+        duplicate ? "bg-muted/30 opacity-70" : "hover:bg-muted/40"
+      }`}
+    >
       <TableCell>
-        <a
-          href={`/orders/${order.id}`}
-          className="inline-flex items-center gap-2 font-semibold text-link underline-offset-4 hover:underline"
-        >
-          <span className="grid size-7 place-items-center rounded-lg bg-accent text-accent-foreground">
-            <PackageOpen size={14} />
-          </span>
-          {order.orderNumber}
-          {(order.hasReview ?? 0) > 0 && (
-            <Star size={12} className="fill-warning text-warning" />
+        <div className="flex items-center gap-2">
+          <a
+            href={`/orders/${order.id}`}
+            className="inline-flex items-center gap-2 font-semibold text-link underline-offset-4 hover:underline"
+          >
+            <span className="grid size-7 place-items-center rounded-lg bg-accent text-accent-foreground">
+              <PackageOpen size={14} />
+            </span>
+            {order.orderNumber}
+            {(order.hasReview ?? 0) > 0 && (
+              <Star size={12} className="fill-warning text-warning" />
+            )}
+          </a>
+          {duplicate ? (
+            <span className="rounded-full bg-muted px-2 py-0.5 text-[10.5px] font-semibold text-muted-foreground">
+              {t("duplicates.row_tag")}
+            </span>
+          ) : (
+            onToggleDuplicates && (
+              <DuplicateToggle
+                count={duplicateCount}
+                expanded={duplicatesExpanded}
+                onToggle={onToggleDuplicates}
+              />
+            )
           )}
-        </a>
+        </div>
       </TableCell>
       <TableCell>
         <p className="font-medium text-foreground">{order.customerName}</p>
@@ -64,6 +128,12 @@ export function OrderDesktopRow({ order, drivers, companies, onChanged, onError 
       <TableCell className="text-end font-bold tabular-nums text-foreground">
         {formatMoney(orderTotal(order), locale)}
       </TableCell>
+      <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
+        {new Intl.DateTimeFormat(locale, {
+          dateStyle: "medium",
+          timeStyle: "short",
+        }).format(new Date(order.createdAt))}
+      </TableCell>
       <TableCell className="text-end">
         <OrderRowActions
           order={order}
@@ -77,10 +147,21 @@ export function OrderDesktopRow({ order, drivers, companies, onChanged, onError 
   );
 }
 
-export function OrderMobileCard({ order, drivers, companies, onChanged, onError }: RowProps) {
+export function OrderMobileCard({
+  order,
+  drivers,
+  companies,
+  onChanged,
+  onError,
+  duplicate = false,
+  duplicateCount = 0,
+  duplicatesExpanded = false,
+  onToggleDuplicates,
+}: RowProps) {
   const locale = useLocale();
+  const t = useT("orders");
   return (
-    <article className="p-4">
+    <article className={duplicate ? "bg-muted/30 p-4 opacity-70" : "p-4"}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
@@ -93,6 +174,11 @@ export function OrderMobileCard({ order, drivers, companies, onChanged, onError 
             {(order.hasReview ?? 0) > 0 && (
               <Star size={12} className="fill-warning text-warning" />
             )}
+            {duplicate && (
+              <span className="rounded-full bg-muted px-2 py-0.5 text-[10.5px] font-semibold text-muted-foreground">
+                {t("duplicates.row_tag")}
+              </span>
+            )}
           </div>
           <p className="mt-0.5 truncate text-sm font-medium text-foreground">
             {order.customerName}
@@ -100,6 +186,15 @@ export function OrderMobileCard({ order, drivers, companies, onChanged, onError 
           <p className="mt-0.5 text-xs text-muted-foreground" dir="ltr">
             {order.phone}
           </p>
+          {!duplicate && onToggleDuplicates && duplicateCount > 0 && (
+            <div className="mt-1.5">
+              <DuplicateToggle
+                count={duplicateCount}
+                expanded={duplicatesExpanded}
+                onToggle={onToggleDuplicates}
+              />
+            </div>
+          )}
         </div>
         <div className="flex items-start gap-1">
           <OrderStatus order={order} onChanged={onChanged} onError={onError} />
@@ -122,6 +217,12 @@ export function OrderMobileCard({ order, drivers, companies, onChanged, onError 
           {formatMoney(orderTotal(order), locale)}
         </span>
       </div>
+      <p className="mt-1 text-xs text-muted-foreground">
+        {new Intl.DateTimeFormat(locale, {
+          dateStyle: "medium",
+          timeStyle: "short",
+        }).format(new Date(order.createdAt))}
+      </p>
       <div className="mt-2">
         <OrderDelivery order={order} companies={companies} />
       </div>

@@ -1,6 +1,34 @@
 {
   "page_title": "الطلبات",
   "orders_count": "طلب",
+  "per_page_label": "عرض",
+  "groups_label": "أقسام الطلبات",
+  "groups": {
+    "all": "الكل",
+    "new": "الجديدة",
+    "confirmed": "المؤكدة",
+    "in_progress": "قيد التنفيذ",
+    "following": "قيد المتابعة",
+    "delivered": "المنجزة",
+    "returned": "المرتجعة",
+    "cancelled": "الملغية"
+  },
+  "duplicates": {
+    "toggle": "إظهار المكرر",
+    "badge": "مكرر ×{count}",
+    "row_tag": "مكرر"
+  },
+  "edit": {
+    "save": "حفظ",
+    "saved": "تم حفظ التعديل",
+    "error": "تعذر حفظ التعديل"
+  },
+  "lines": {
+    "title": "تعديل المنتجات",
+    "open": "تعديل المنتجات",
+    "unit_price": "سعر الوحدة",
+    "line_total": "المجموع"
+  },
   "new_order_button": "طلب جديد",
   "search_placeholder": "البحث برقم الطلب أو العميل...",
   "load_error": "تعذر تحميل الطلبات",
@@ -17,6 +45,7 @@
     "driver": "السائق",
     "date": "التاريخ",
     "not_assigned": "غير معين",
+    "quantity": "الكمية",
     "total": "الإجمالي"
   },
   "actions": {
@@ -71,7 +100,9 @@
     "company": "شركة",
     "unassigned": "غير معين",
     "wilaya": "الولاية",
-    "all_wilayas": "جميع الولايات"
+    "all_wilayas": "جميع الولايات",
+    "date_from": "من تاريخ",
+    "date_to": "إلى تاريخ"
   },
   "type": {
     "online": "أونلاين",
@@ -123,6 +154,7 @@
     "no_notes": "لا توجد ملاحظات",
     "photos": "الصور",
     "status_timeline": "مراحل الطلب",
+    "manual_status_label": "تغيير الحالة",
     "updating": "جاري التحديث...",
     "status_updated": "تم تحديث الحالة: ",
     "status_change_confirm_title": "تحديث حالة الطلب؟",
@@ -195,7 +227,17 @@
     "tracking_return_received": "تم استلام المرتجع",
     "tracking_delivered": "تم التسليم",
     "tracking_encaissed": "تم تحصيل المبلغ",
-    "tracking_payed": "تم الدفع"
+    "tracking_payed": "تم الدفع",
+    "edit_order": "تعديل الطلب",
+    "edit_order_title": "تعديل الطلب",
+    "edit_order_save": "حفظ الطلب",
+    "edit_order_success": "تم تحديث الطلب",
+    "edit_order_error": "فشل تحديث الطلب",
+    "edit_order_fee_note": "تغيير الولاية أو نوع التوصيل يعيد حساب رسوم التوصيل.",
+    "error_commune_required": "أضف البلدية قبل تأكيد الطلب",
+    "add_product": "إضافة منتج",
+    "add_product_success": "تمت إضافة المنتج",
+    "add_product_error": "تعذر إضافة المنتج"
   },
   "next_status": {
     "new": "تأكيد الطلب",
@@ -266,7 +308,12 @@
     "error_commune": "يرجى اختيار البلدية",
     "error_address": "العنوان مطلوب للتوصيل المنزلي",
     "error_delivery_unavailable": "طريقة التوصيل هذه غير متاحة للولاية المختارة",
-    "new_order_subtitle": "أدخل بيانات العميل وأضف المنتجات لإنشاء طلب جديد"
+    "new_order_subtitle": "أدخل بيانات العميل وأضف المنتجات لإنشاء طلب جديد",
+    "error_quantity": "أدخل كمية صحيحة (1 على الأقل)",
+    "error_total_below_fee": "المجموع يجب أن يكون >= رسوم التوصيل",
+    "products_subtotal": "مجموع المنتجات",
+    "commune_search_placeholder": "ابحث عن البلدية...",
+    "commune_no_results": "لا توجد نتائج"
   },
   "nav_group": "المبيعات",
   "abandoned": {

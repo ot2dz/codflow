@@ -527,9 +527,9 @@ export async function syncGeoNames(c: Context<AppContext>) {
     );
   }
 
-  if (company.code !== "yalidine") {
+  if (company.code !== "yalidine" && !isEcotrackCompany(company.code)) {
     throw new BusinessLogicError(
-      `Geo name sync applies to carriers that match addresses by name (Yalidine). "${company.code}" does not need it.`,
+      `Geo name sync applies to carriers that match addresses by name (Yalidine, EcoTrack). "${company.code}" does not need it.`,
       ERROR_CODES.OPERATION_NOT_SUPPORTED,
       { companyId: id, code: company.code }
     );
@@ -643,4 +643,105 @@ export async function listWebhookEvents(c: Context<AppContext>) {
     },
     200,
   );
+}
+
+/**
+ * GET /delivery-companies/:id/carrier-products
+ * Read the cached mirror of the products the carrier holds in its own stock.
+ * Display-only; refreshed via POST .../sync-carrier-stock.
+ */
+export async function fetchCompanyCarrierProducts(c: Context<AppContext>) {
+  const db = getDb(c.env.DB);
+  const { id } = (c.req as any).valid?.("param") ?? { id: c.req.param("id")! };
+
+  const company = await queries.getDeliveryCompanyById(db, id);
+  if (!company) throw new NotFoundError("Delivery company", id);
+
+  const rows = await queries.listCarrierProducts(db, id);
+  const products = rows.map((r) => ({
+    id: r.id,
+    reference: r.reference,
+    barcode: r.barcode,
+    title: r.title,
+    isActive: r.isActive,
+    image: r.image,
+    stockDisponible: r.stockDisponible,
+    stockReserve: r.stockReserve,
+    stockPhysique: r.stockPhysique,
+    syncedAt: r.syncedAt,
+  }));
+
+  const syncedAt = rows.length
+    ? rows.reduce((latest, r) => (r.syncedAt > latest ? r.syncedAt : latest), rows[0].syncedAt)
+    : null;
+
+  return c.json({ success: true, data: { products, total: products.length, syncedAt } }, 200);
+}
+
+/**
+ * POST /delivery-companies/:id/sync-carrier-stock
+ * Pull the carrier's product stock (EcoTrack get/products/list, paginated) into
+ * the local mirror. Display-only — never gates dispatch.
+ */
+export async function syncCompanyCarrierStock(c: Context<AppContext>) {
+  const db = getDb(c.env.DB);
+  const { id } = (c.req as any).valid?.("param") ?? { id: c.req.param("id")! };
+
+  const company = await queries.getDeliveryCompanyRaw(db, id);
+  if (!company) throw new NotFoundError("Delivery company", id);
+
+  if (!company.apiToken) {
+    throw new ValidationError(
+      `${company.name} is not connected — add API credentials first`,
+      ERROR_CODES.MISSING_API_CREDENTIALS,
+      { companyId: id }
+    );
+  }
+
+  let provider;
+  try {
+    provider = getProvider(company);
+  } catch (err) {
+    throw new BusinessLogicError(
+      err instanceof Error ? err.message : "Provider not available",
+      ERROR_CODES.PROVIDER_NOT_SUPPORTED,
+      { companyId: id, code: company.code }
+    );
+  }
+
+  if (typeof provider.getProducts !== "function") {
+    throw new BusinessLogicError(
+      `The ${company.code} provider does not expose carrier-held stock`,
+      ERROR_CODES.OPERATION_NOT_SUPPORTED,
+      { provider: company.code }
+    );
+  }
+
+  try {
+    const MAX_PAGES = 50;
+    let page = 1;
+    let lastPage = 1;
+    const all: queries.CarrierProductRow[] = [];
+
+    do {
+      const res = await provider.getProducts(page);
+      all.push(...res.products);
+      lastPage = res.lastPage || page;
+      page += 1;
+    } while (page <= lastPage && page <= MAX_PAGES);
+
+    const total = await queries.replaceCarrierProducts(db, id, all);
+    const syncedAt = new Date().toISOString();
+    console.info(
+      `[sync-carrier-stock] company=${id} code=${company.code} total=${total} pages=${Math.min(lastPage, MAX_PAGES)}`,
+    );
+    return c.json(
+      { success: true, data: { total, pagesFetched: Math.min(lastPage, MAX_PAGES), syncedAt } },
+      200,
+    );
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Failed to fetch carrier stock";
+    console.error(`[sync-carrier-stock] failed company=${id}:`, msg);
+    throw new ExternalApiError(company.name, msg, { companyId: id, code: company.code });
+  }
 }

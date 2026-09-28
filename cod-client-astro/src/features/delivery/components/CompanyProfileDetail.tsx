@@ -17,6 +17,7 @@ import { getProviderConfig } from "@/features/delivery/types";
 import { Alert, PageHeader } from "@/components/ui";
 import { CompanyHeroCard } from "@/features/delivery/components/CompanyHeroCard";
 import { CompanySettingsSection } from "@/features/delivery/components/CompanySettingsSection";
+import { CompanyCarrierStockCard } from "@/features/delivery/components/CompanyCarrierStockCard";
 import { CompanyWebhookEventsCard } from "@/features/delivery/components/CompanyWebhookEventsCard";
 import { notify } from "@/lib/notify";
 
@@ -238,6 +239,10 @@ export function CompanyProfileDetail({ providerCode }: { providerCode: string })
         syncingGeo={syncingGeo}
         onSyncGeo={() => void handleSyncGeo()}
       />
+
+      {company && (providerCode === "ecotrack" || providerCode.endsWith("_ecotrack")) && (
+        <CompanyCarrierStockCard company={company} canManage={canManage} />
+      )}
 
       {(providerCode === "yalidine" || providerCode === "zr_express") && (
         <CompanyWebhookEventsCard company={company} />

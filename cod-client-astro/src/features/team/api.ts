@@ -103,6 +103,11 @@ export async function rotateTeamMemberApiKey(userId: string) {
   return response.data;
 }
 
+export async function resetTeamMemberPassword(userId: string) {
+  const response = await apiFetch<DataEnvelope<{ tempPassword: string }>>(`/api/users/${encodeURIComponent(userId)}/reset-password`, json({ method: "POST", body: "{}" }));
+  return response.data;
+}
+
 export async function listUserActivityLogs(userId: string, params: { limit?: number; offset?: number } = {}) {
   const query = new URLSearchParams({
     limit: String(params.limit ?? 30),

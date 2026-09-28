@@ -7,25 +7,34 @@ import cloudflare from "@astrojs/cloudflare";
 const orderDetailFallback = {
   name: "order-detail-static-fallback",
   configureServer(server) {
-    server.middlewares.use((request, _response, next) => {
-      const pathname = request.url?.split("?", 1)[0] ?? "";
-       const isOrderDetail = /^\/orders\/[^/]+\/?$/.test(pathname) && pathname !== "/orders/new" && pathname !== "/orders/abandoned";
-       const isCustomerDetail = /^\/customers\/[^/]+(?:\/edit)?\/?$/.test(pathname) && pathname !== "/customers/new";
-       const isCustomerGroupDetail = /^\/customer-groups\/[^/]+(?:\/edit)?\/?$/.test(pathname) && pathname !== "/customer-groups/new";
-       const isCustomerTagDetail = /^\/customer-tags\/[^/]+(?:\/edit)?\/?$/.test(pathname) && pathname !== "/customer-tags/new";
-       const isProductDetail = /^\/products\/[^/]+(?:\/edit)?\/?$/.test(pathname) && pathname !== "/products/new" && pathname !== "/products/stock";
-       const isProductGroupEdit = /^\/product-groups\/[^/]+\/edit\/?$/.test(pathname);
-       const isOfferEdit = /^\/offers\/[^/]+\/?$/.test(pathname) && pathname !== "/offers/new";
-       const isDriverRoute = /^\/delivery\/drivers\/[^/]+(?:\/(edit|compensations))?\/?$/.test(pathname) && pathname !== "/delivery/drivers/new";
-       const isDeliveryCompanyRoute = /^\/delivery\/companies\/[^/]+(?:\/(credentials|stop-desks))?\/?$/.test(pathname);
-       const isShippingProfileRoute = /^\/delivery\/shipping-profiles\/[^/]+(?:\/edit)?\/?$/.test(pathname) && pathname !== "/delivery/shipping-profiles/new";
-       const isTeamMemberRoute = /^\/team\/[^/]+\/?$/.test(pathname);
-       const isLandingPageStudio = /^\/landing-pages\/[^/]+\/studio\/?$/.test(pathname);
-       if (isOrderDetail || isCustomerDetail || isCustomerGroupDetail || isCustomerTagDetail || isProductDetail || isProductGroupEdit || isOfferEdit || isDriverRoute || isDeliveryCompanyRoute || isShippingProfileRoute || isTeamMemberRoute || isLandingPageStudio) {
-         request.url = "/";
-       }
+    const handleRequest = (request, _response, next) => {
+      const pathname = new URL(request.url ?? "/", "http://localhost").pathname;
+      const isOrderDetail = /^\/orders\/[^/]+\/?$/.test(pathname) && pathname !== "/orders/new" && pathname !== "/orders/abandoned";
+      const isCustomerDetail = /^\/customers\/[^/]+(?:\/edit)?\/?$/.test(pathname) && pathname !== "/customers/new";
+      const isCustomerGroupDetail = /^\/customer-groups\/[^/]+(?:\/edit)?\/?$/.test(pathname) && pathname !== "/customer-groups/new";
+      const isCustomerTagDetail = /^\/customer-tags\/[^/]+(?:\/edit)?\/?$/.test(pathname) && pathname !== "/customer-tags/new";
+      const isProductDetail = /^\/products\/[^/]+(?:\/edit)?\/?$/.test(pathname) && pathname !== "/products/new" && pathname !== "/products/stock";
+      const isProductGroupEdit = /^\/product-groups\/[^/]+\/edit\/?$/.test(pathname);
+      const isOfferEdit = /^\/offers\/[^/]+\/?$/.test(pathname) && pathname !== "/offers/new";
+      const isDriverRoute = /^\/delivery\/drivers\/[^/]+(?:\/(edit|compensations))?\/?$/.test(pathname) && pathname !== "/delivery/drivers/new";
+      const isDeliveryCompanyRoute = /^\/delivery\/companies\/[^/]+(?:\/(credentials|stop-desks))?\/?$/.test(pathname);
+      const isShippingProfileRoute = /^\/delivery\/shipping-profiles\/[^/]+(?:\/edit)?\/?$/.test(pathname) && pathname !== "/delivery/shipping-profiles/new";
+      const isTeamMemberRoute = /^\/team\/[^/]+\/?$/.test(pathname);
+      const isLandingPageStudio = /^\/landing-pages\/[^/]+\/studio\/?$/.test(pathname);
+      if (isOrderDetail || isCustomerDetail || isCustomerGroupDetail || isCustomerTagDetail || isProductDetail || isProductGroupEdit || isOfferEdit || isDriverRoute || isDeliveryCompanyRoute || isShippingProfileRoute || isTeamMemberRoute || isLandingPageStudio) {
+        request.url = "/";
+        request.originalUrl = "/";
+      }
       next();
-    });
+    };
+    return () => {
+      const baseIndex = server.middlewares.stack.findIndex((layer) => layer.handle.name === "devBaseMiddleware");
+      const insertAt = baseIndex >= 0 ? baseIndex + 1 : server.middlewares.stack.length;
+      server.middlewares.stack.splice(insertAt, 0, {
+        route: "",
+        handle: handleRequest,
+      });
+    };
   },
 };
 

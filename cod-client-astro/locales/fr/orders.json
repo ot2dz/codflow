@@ -1,6 +1,34 @@
 {
   "page_title": "Commandes",
   "orders_count": "commandes",
+  "per_page_label": "Afficher",
+  "groups_label": "Sections des commandes",
+  "groups": {
+    "all": "Toutes",
+    "new": "Nouvelles",
+    "confirmed": "Confirmées",
+    "in_progress": "En cours",
+    "following": "En suivi",
+    "delivered": "Terminées",
+    "returned": "Retournées",
+    "cancelled": "Annulées"
+  },
+  "duplicates": {
+    "toggle": "Afficher les doublons",
+    "badge": "Doublon ×{count}",
+    "row_tag": "Doublon"
+  },
+  "edit": {
+    "save": "Enregistrer",
+    "saved": "Modifications enregistrées",
+    "error": "Impossible d'enregistrer"
+  },
+  "lines": {
+    "title": "Modifier les produits",
+    "open": "Modifier les produits",
+    "unit_price": "Prix unitaire",
+    "line_total": "Total ligne"
+  },
   "new_order_button": "Nouvelle commande",
   "search_placeholder": "Rechercher par numéro de commande ou client...",
   "load_error": "Impossible de charger les commandes",
@@ -17,6 +45,7 @@
     "driver": "Livreur",
     "date": "Date",
     "not_assigned": "Non assigné",
+    "quantity": "Qté",
     "total": "Total"
   },
   "actions": {
@@ -71,7 +100,9 @@
     "company": "Société",
     "unassigned": "Non assigné",
     "wilaya": "Wilaya",
-    "all_wilayas": "Toutes les wilayas"
+    "all_wilayas": "Toutes les wilayas",
+    "date_from": "Du",
+    "date_to": "Au"
   },
   "type": {
     "online": "En ligne",
@@ -123,6 +154,7 @@
     "no_notes": "Aucune note",
     "photos": "Photos",
     "status_timeline": "Historique de la commande",
+    "manual_status_label": "Changer le statut",
     "updating": "Mise à jour...",
     "status_updated": "Statut mis à jour : ",
     "status_change_confirm_title": "Mettre à jour le statut ?",
@@ -195,7 +227,17 @@
     "tracking_return_received": "Retour réceptionné",
     "tracking_delivered": "Livré",
     "tracking_encaissed": "Montant encaissé",
-    "tracking_payed": "Paiement effectué"
+    "tracking_payed": "Paiement effectué",
+    "edit_order": "Modifier la commande",
+    "edit_order_title": "Modifier la commande",
+    "edit_order_save": "Enregistrer la commande",
+    "edit_order_success": "Commande mise à jour",
+    "edit_order_error": "Échec de la mise à jour de la commande",
+    "edit_order_fee_note": "Changer la wilaya ou le type de livraison recalcule les frais de livraison.",
+    "error_commune_required": "Ajoutez la commune avant de confirmer la commande",
+    "add_product": "Ajouter un produit",
+    "add_product_success": "Produit ajouté",
+    "add_product_error": "Impossible d'ajouter le produit"
   },
   "next_status": {
     "new": "Confirmer la commande",
@@ -266,7 +308,12 @@
     "error_commune": "Veuillez sélectionner une commune",
     "error_address": "L'adresse est obligatoire pour la livraison à domicile",
     "error_delivery_unavailable": "Cette méthode de livraison n'est pas disponible pour la wilaya sélectionnée",
-    "new_order_subtitle": "Remplissez les informations du client et ajoutez des produits pour créer une nouvelle commande"
+    "new_order_subtitle": "Remplissez les informations du client et ajoutez des produits pour créer une nouvelle commande",
+    "error_quantity": "Saisissez une quantité valide (au moins 1)",
+    "error_total_below_fee": "Le total doit être au moins les frais de livraison",
+    "products_subtotal": "Sous-total produits",
+    "commune_search_placeholder": "Rechercher une commune...",
+    "commune_no_results": "Aucun résultat"
   },
   "nav_group": "Ventes",
   "abandoned": {

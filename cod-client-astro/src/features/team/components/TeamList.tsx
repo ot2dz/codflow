@@ -27,11 +27,12 @@ import {
   type TeamFilters,
   type TeamSortKey,
 } from "@/features/team/model";
-import { listAllTeamMembers, rotateTeamMemberApiKey } from "@/features/team/api";
+import { listAllTeamMembers, resetTeamMemberPassword, rotateTeamMemberApiKey } from "@/features/team/api";
 import type { TeamMember } from "@/features/team/types";
 import { InviteDialog } from "@/features/team/components/InviteDialog";
 import { ScopeAssignmentDialog } from "@/features/team/components/ScopeAssignmentDialog";
 import { RotateKeyDialog } from "@/features/team/components/RotateKeyDialog";
+import { ResetPasswordDialog } from "@/features/team/components/ResetPasswordDialog";
 import { TeamDesktopRow, TeamMobileCard } from "@/features/team/components/TeamRow";
 
 const EMPTY_FILTERS: TeamFilters = { query: "", role: "all", status: "all" };
@@ -82,6 +83,7 @@ export function TeamList() {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [scopeUser, setScopeUser] = useState<TeamMember | null>(null);
   const [rotatedKey, setRotatedKey] = useState<{ apiKey: string; name: string } | null>(null);
+  const [resetUser, setResetUser] = useState<{ tempPassword: string; name: string } | null>(null);
   const deferredFilters = useDeferredValue(filters);
 
   const isAdmin = identity?.role === "admin";
@@ -166,11 +168,32 @@ export function TeamList() {
     }
   }
 
+  async function onResetPassword(member: TeamMember) {
+    if (
+      !(await confirm({
+        title: t("reset_password_dialog.confirm_title").replace("{name}", member.name),
+        description: t("reset_password_dialog.confirm_description"),
+        confirmLabel: t("reset_password_dialog.confirm_button"),
+        tone: "danger",
+      }))
+    )
+      return;
+    try {
+      const result = await resetTeamMemberPassword(member.id);
+      setResetUser({ tempPassword: result.tempPassword, name: member.name });
+      notify.success(t("reset_password_dialog.success"));
+    } catch (cause) {
+      setActionError(teamErrorMessage(cause, t));
+      notify.error(t("reset_password_dialog.error"));
+    }
+  }
+
   const rowActions = {
     onView: (item: TeamMember) =>
       window.location.assign(`/team/${encodeURIComponent(item.id)}`),
     onManageScopes: setScopeUser,
     onRotateApiKey: (item: TeamMember) => void onRotateApiKey(item),
+    onResetPassword: (item: TeamMember) => void onResetPassword(item),
   };
 
   return (
@@ -348,6 +371,12 @@ export function TeamList() {
         apiKey={rotatedKey?.apiKey ?? null}
         userName={rotatedKey?.name ?? null}
         onClose={() => setRotatedKey(null)}
+      />
+      <ResetPasswordDialog
+        open={resetUser !== null}
+        tempPassword={resetUser?.tempPassword ?? null}
+        userName={resetUser?.name ?? null}
+        onClose={() => setResetUser(null)}
       />
     </div>
   );

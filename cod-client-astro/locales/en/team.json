@@ -20,6 +20,19 @@
     "warning": "This key will not be shown again. Copy it now and share it securely.",
     "done": "Done"
   },
+  "reset_password": "Reset Password",
+  "reset_password_dialog": {
+    "confirm_title": "Reset password for {name}?",
+    "confirm_description": "The member's current password will stop working immediately. A new temporary password is shown once — share it with them and have them change it after signing in.",
+    "confirm_button": "Reset Password",
+    "title": "Temporary Password",
+    "subtitle": "for {name}",
+    "warning": "This password will not be shown again. Share it securely — the member should change it after signing in.",
+    "copied": "Password copied to clipboard",
+    "success": "Password reset successfully",
+    "error": "Failed to reset the password",
+    "done": "Done"
+  },
   "search_placeholder": "Search team members...",
   "table": {
     "name": "Name",

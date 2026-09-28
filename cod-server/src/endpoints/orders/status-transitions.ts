@@ -41,7 +41,9 @@ export async function updateStatus(c: Context<AppContext>) {
     throw new NotFoundError("Order", orderId);
   }
 
-  // Guard: enforce valid forward transitions — prevents backward moves and invalid jumps
+  // Guard: enforce valid forward transitions — prevents backward moves and invalid jumps.
+  // Skipped when the caller asks for a manual override (dashboard status dropdown),
+  // which exists so the merchant can correct a mistaken status.
   const ALLOWED_TRANSITIONS: Record<string, string[]> = {
     new:              ["confirmed", "unreachable", "cancelled"],
     confirmed:        ["preparing", "unreachable", "cancelled"],
@@ -56,18 +58,31 @@ export async function updateStatus(c: Context<AppContext>) {
     cancelled:        [],
   };
 
-  const allowed = ALLOWED_TRANSITIONS[order.status] ?? [];
-  if (!allowed.includes(validated.status)) {
-    return c.json({
-      error: `Cannot transition from "${order.status}" to "${validated.status}"`,
-      code: "INVALID_STATUS_TRANSITION",
-      category: ERROR_CATEGORIES.BUSINESS_LOGIC,
-      context: {
-        currentStatus:     order.status,
-        targetStatus:      validated.status,
-        allowedTransitions: allowed,
-      },
-    }, 400);
+  if (!validated.override) {
+    const allowed = ALLOWED_TRANSITIONS[order.status] ?? [];
+    if (!allowed.includes(validated.status)) {
+      return c.json({
+        error: `Cannot transition from "${order.status}" to "${validated.status}"`,
+        code: "INVALID_STATUS_TRANSITION",
+        category: ERROR_CATEGORIES.BUSINESS_LOGIC,
+        context: {
+          currentStatus:     order.status,
+          targetStatus:      validated.status,
+          allowedTransitions: allowed,
+        },
+      }, 400);
+    }
+  }
+
+  // A confirmed order must have a delivery destination — carrier dispatch
+  // refuses a commune-less order, so confirming one is a dead end. The merchant
+  // adds the commune via the order edit dialog (PATCH /orders/:id) first.
+  if (validated.status === "confirmed" && !order.communeId) {
+    throw new BusinessLogicError(
+      "Add the commune before confirming this order",
+      ERROR_CODES.MISSING_WILAYA_COMMUNE,
+      { orderId, status: order.status }
+    );
   }
 
   // Get user from context (set by auth middleware)

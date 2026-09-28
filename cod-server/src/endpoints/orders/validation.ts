@@ -6,6 +6,7 @@
 
 import { z } from "zod";
 import { parseOrderCursor } from "../../../../cod-shared/queries/orders";
+import { toLocalAlgerianMobile } from "@/endpoints/store-otp/phone";
 
 export const createOrderSchema = z.object({
   customerId: z.string().min(1),
@@ -57,10 +58,72 @@ export type OrderStatus = typeof ORDER_STATUSES[number];
 
 export const updateOrderStatusSchema = z.object({
   status: z.enum(ORDER_STATUSES),
+  /**
+   * Manual override — skip the forward-transition guard so the merchant can
+   * correct a mistaken status (e.g. ready → new). Used by the dashboard's
+   * status dropdown. The commune-required-to-confirm rule still applies.
+   */
+  override: z.boolean().optional(),
+});
+
+/**
+ * Edits an order's customer + delivery details before dispatch. Partial patch:
+ * only supplied fields are written. Used to correct a name/phone, complete a
+ * missing commune (storefront orders when the commune field was hidden), change
+ * the wilaya/address, or switch the delivery type. Changing the wilaya or the
+ * delivery type re-prices the delivery fee in the handler.
+ */
+export const updateOrderSchema = z.object({
+  customerName: z.string().min(1).max(100).optional(),
+  phone: z
+    .preprocess(
+      (v) => (typeof v === "string" ? toLocalAlgerianMobile(v) ?? v : v),
+      z.string().regex(/^0[567]\d{8}$/, "Invalid Algerian phone number"),
+    )
+    .optional(),
+  wilayaId: z.number().int().min(1).max(58).optional(),
+  communeId: z.string().min(1).optional(),
+  address: z.string().max(300).nullish(),
+  deliveryType: z.enum(["home", "stop_desk"]).optional(),
+  stationCode: z.string().max(50).nullish(),
+  notes: z.string().max(500).nullish(),
+  /**
+   * Product/quantity edits. `products` edits each line individually
+   * (authoritative when present); `quantity`/`total` are single-line
+   * shorthands — `total` is the grand total INCLUDING delivery, from which the
+   * unit price is derived. Every edit recomputes the order's price + COD.
+   */
+  products: z
+    .array(
+      z.object({
+        id: z.string().min(1),
+        /** Replace the line's product/variant (optional — keeps the current one). */
+        productId: z.string().min(1).optional(),
+        variantId: z.string().min(1).nullish(),
+        quantity: z.number().int().positive().max(100000).optional(),
+        pricePerUnit: z.number().min(0).optional(),
+      }),
+    )
+    .min(1)
+    .optional(),
+  quantity: z.number().int().positive().max(100000).optional(),
+  total: z.number().min(0).optional(),
 });
 
 export const assignDriverSchema = z.object({
   driverId: z.string().min(1),
+});
+
+/**
+ * POST /orders/{id}/products
+ * Appends one product line to an existing order. Price defaults to the catalog
+ * (variant price when a variant is chosen), but the merchant may override it.
+ */
+export const addOrderProductSchema = z.object({
+  productId: z.string().min(1),
+  variantId: z.string().min(1).nullish(),
+  quantity: z.number().int().positive().max(100000),
+  pricePerUnit: z.number().min(0).optional(),
 });
 
 /**
@@ -105,6 +168,8 @@ export type BulkDispatchInput = z.infer<typeof bulkDispatchSchema>;
 
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;
 export type UpdateOrderStatusInput = z.infer<typeof updateOrderStatusSchema>;
+export type UpdateOrderInput = z.infer<typeof updateOrderSchema>;
 export type AssignDriverInput = z.infer<typeof assignDriverSchema>;
+export type AddOrderProductInput = z.infer<typeof addOrderProductSchema>;
 export type OrderFiltersInput = z.infer<typeof orderFiltersSchema>;
 export type ReturnOrderProductInput = z.infer<typeof returnOrderProductSchema>;

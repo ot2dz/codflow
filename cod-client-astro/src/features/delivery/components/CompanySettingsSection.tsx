@@ -48,8 +48,9 @@ export function CompanySettingsSection({
   const supportsWebhook = providerCode === "zr_express" || providerCode === "yalidine";
   const isEcotrackProvider = providerCode === "ecotrack" || providerCode.endsWith("_ecotrack");
   // Only carriers that match parcel addresses by exact name strings need
-  // the geo-name map (Yalidine). Others dispatch with reference names.
-  const matchesByName = providerCode === "yalidine";
+  // the geo-name map (Yalidine + the EcoTrack family — e.g. Packers' "Souma"
+  // vs our "Soumaa"). Others dispatch with reference names.
+  const matchesByName = providerCode === "yalidine" || isEcotrackProvider;
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">

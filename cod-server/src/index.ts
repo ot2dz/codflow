@@ -188,15 +188,33 @@ function getOAuthProvider(env: Env): OAuthProvider<Env> {
   return oauthProviderInstance;
 }
 
+function shouldUseOAuthProvider(env: Env): boolean {
+  if (env.ENVIRONMENT !== "development") {
+    return true;
+  }
+
+  const resourceOrigin = new URL(env.WORKER_SELF_URL);
+  return !(
+    resourceOrigin.protocol === "http:" &&
+    ["localhost", "127.0.0.1", "::1", "[::1]"].includes(resourceOrigin.hostname)
+  );
+}
+
 export default {
-  fetch: (request: Request, env: Env, ctx: ExecutionContext) =>
-    getOAuthProvider(env).fetch(request, env, ctx),
+  fetch: (request: Request, env: Env, ctx: ExecutionContext) => {
+    if (!shouldUseOAuthProvider(env)) {
+      return app.fetch(request, env, ctx);
+    }
+    return getOAuthProvider(env).fetch(request, env, ctx);
+  },
   async scheduled(
     _event: ScheduledEvent,
     env: Env,
     ctx: ExecutionContext
   ): Promise<void> {
     ctx.waitUntil(sweepAbandonedOrders(env));
-    ctx.waitUntil(getOAuthProvider(env).purgeExpiredData(env, { batchSize: 50 }));
+    if (shouldUseOAuthProvider(env)) {
+      ctx.waitUntil(getOAuthProvider(env).purgeExpiredData(env, { batchSize: 50 }));
+    }
   },
 };

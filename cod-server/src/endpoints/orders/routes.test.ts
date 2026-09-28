@@ -12,6 +12,7 @@ import { ERROR_CODES } from "../../../../cod-shared/errors/codes";
 import ordersRouter from "./routes";
 import * as queries from "./queries";
 import * as resolveFee from "./resolve-fee";
+import { applyOrderLineEdits, addOrderLines } from "../../../../cod-shared/queries/orders";
 import { NotFoundError, BusinessLogicError } from "@/lib/errors/classes";
 
 vi.mock("@/db", () => ({ getDb: vi.fn(() => mockDb) }));
@@ -48,6 +49,21 @@ vi.mock("@/endpoints/delivery-companies/queries", () => ({
     apiToken: "tok",
   })),
 }));
+vi.mock("../../../../cod-shared/queries/orders", async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  return {
+    ...actual,
+    applyOrderLineEdits: vi.fn(async () => {}),
+    addOrderLines: vi.fn(async () => {}),
+  };
+});
+vi.mock("../../../../cod-shared/queries/stock", async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  return {
+    ...actual,
+    getProductInventory: vi.fn(async () => ({ inventory: 999, exists: true })),
+  };
+});
 
 const NOW = new Date().toISOString();
 
@@ -304,6 +320,55 @@ describe("Orders routes (OpenAPIHono)", () => {
       expect(body.code).toBe("INVALID_STATUS_TRANSITION");
       expect(body.context.allowedTransitions).toEqual([]);
     });
+
+    it("allows a manual override to correct a mistaken status", async () => {
+      vi.mocked(queries.getOrderById).mockResolvedValue(orderRow({ status: "delivered" }) as any);
+      vi.mocked(queries.updateOrderStatus).mockResolvedValue(undefined as any);
+
+      const res = await app.request("/api/orders/ord_1/status", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "new", override: true }),
+      });
+
+      expect(res.status).toBe(200);
+      expect(queries.updateOrderStatus).toHaveBeenCalledWith(
+        mockDb, "ord_1", "new", "admin_user_001", "Admin User"
+      );
+    });
+
+    it("confirms an order that has a commune", async () => {
+      vi.mocked(queries.getOrderById).mockResolvedValue(
+        orderRow({ status: "new", communeId: "16001" }) as any
+      );
+      vi.mocked(queries.updateOrderStatus).mockResolvedValue(undefined as any);
+
+      const res = await app.request("/api/orders/ord_1/status", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "confirmed" }),
+      });
+
+      expect(res.status).toBe(200);
+      expect(queries.updateOrderStatus).toHaveBeenCalled();
+    });
+
+    it("blocks confirming an order with no commune", async () => {
+      vi.mocked(queries.getOrderById).mockResolvedValue(
+        orderRow({ status: "new", communeId: null }) as any
+      );
+
+      const res = await app.request("/api/orders/ord_1/status", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "confirmed" }),
+      });
+
+      expect(res.status).toBe(422);
+      const body: any = await res.json();
+      expect(body.code).toBe(ERROR_CODES.MISSING_WILAYA_COMMUNE);
+      expect(queries.updateOrderStatus).not.toHaveBeenCalled();
+    });
   });
 
   describe("PATCH /api/orders/{id}/assign-driver", () => {
@@ -443,6 +508,75 @@ describe("Orders routes (OpenAPIHono)", () => {
 
   // ─── Shipment operations ────────────────────────────────────────────────────
 
+  describe("POST /api/orders/{id}/products", () => {
+    it("appends a product line with the catalog price", async () => {
+      vi.mocked(queries.getOrderById).mockResolvedValue(orderRow() as any);
+      mockDb = dbSelectReturning({
+        id: "prod_1",
+        name: "Stickers",
+        price: 1400,
+        sku: "STICKERS-001",
+        trackInventory: false,
+      });
+
+      const res = await app.request("/api/orders/ord_1/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId: "prod_1", quantity: 2 }),
+      });
+
+      expect(res.status).toBe(201);
+      expect(addOrderLines).toHaveBeenCalledWith(
+        mockDb,
+        "ord_1",
+        [
+          {
+            productId: "prod_1",
+            productName: "Stickers",
+            variantId: null,
+            variantLabel: null,
+            sku: "STICKERS-001",
+            quantity: 2,
+            pricePerUnit: 1400,
+            trackInventory: false,
+          },
+        ],
+        { id: "admin_user_001", name: "Admin User" }
+      );
+    });
+
+    it("rejects adding a product to a dispatched order", async () => {
+      vi.mocked(queries.getOrderById).mockResolvedValue(
+        orderRow({ trackingNumber: "NE1DZ" }) as any
+      );
+
+      const res = await app.request("/api/orders/ord_1/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId: "prod_1", quantity: 1 }),
+      });
+
+      expect(res.status).toBe(422);
+      const body: any = await res.json();
+      expect(body.code).toBe(ERROR_CODES.ORDER_ALREADY_DISPATCHED);
+      expect(addOrderLines).not.toHaveBeenCalled();
+    });
+
+    it("returns 404 when the product does not exist", async () => {
+      vi.mocked(queries.getOrderById).mockResolvedValue(orderRow() as any);
+      mockDb = dbSelectReturning(null);
+
+      const res = await app.request("/api/orders/ord_1/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId: "missing", quantity: 1 }),
+      });
+
+      expect(res.status).toBe(404);
+      expect(addOrderLines).not.toHaveBeenCalled();
+    });
+  });
+
   describe("shipment operation guards", () => {
     it("update-shipment returns 422 before dispatch", async () => {
       vi.mocked(queries.getOrderById).mockResolvedValue(orderRow() as any);
@@ -486,6 +620,284 @@ describe("Orders routes (OpenAPIHono)", () => {
       expect(res.status).toBe(422);
       const body: any = await res.json();
       expect(body.code).toBe(ERROR_CODES.REQUIRED_FIELD_MISSING);
+    });
+  });
+
+  // ─── Order details edit (complete + correct an order) ────────────────────────
+
+  describe("PATCH /api/orders/{id}", () => {
+    it("sets the commune without re-pricing the delivery fee", async () => {
+      vi.mocked(queries.getOrderById)
+        .mockResolvedValueOnce(orderRow({ communeId: null, commune: null }) as any)
+        .mockResolvedValueOnce(orderRow({ communeId: "16002", commune: "حسين داي" }) as any);
+      mockDb = dbSelectReturning({ id: "16002", wilayaId: 16 });
+
+      const res = await app.request("/api/orders/ord_1", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ communeId: "16002" }),
+      });
+
+      expect(res.status).toBe(200);
+      const body: any = await res.json();
+      expect(body.data.communeId).toBe("16002");
+      expect(queries.updateOrderDetails).toHaveBeenCalledWith(mockDb, "ord_1", {
+        communeId: "16002",
+      });
+      expect(resolveFee.resolveDeliveryFee).not.toHaveBeenCalled();
+    });
+
+    it("corrects name, phone, address and notes", async () => {
+      vi.mocked(queries.getOrderById).mockResolvedValue(orderRow() as any);
+
+      const res = await app.request("/api/orders/ord_1", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerName: "Ahmed B.",
+          phone: "0661112233",
+          address: "New address 5",
+          notes: "Call before",
+        }),
+      });
+
+      expect(res.status).toBe(200);
+      expect(queries.updateOrderDetails).toHaveBeenCalledWith(mockDb, "ord_1", {
+        customerName: "Ahmed B.",
+        phone: "0661112233",
+        address: "New address 5",
+        notes: "Call before",
+      });
+    });
+
+    it("re-prices the fee when the wilaya changes", async () => {
+      vi.mocked(queries.getOrderById).mockResolvedValue(
+        orderRow({ products: [{ productId: "prod_1", quantity: 2 }] }) as any
+      );
+      mockDb = dbSelectReturning({ id: "31001", wilayaId: 31 });
+      vi.mocked(resolveFee.resolveDeliveryFee).mockResolvedValue({
+        deliveryFee: 700,
+        profileId: "profile_1",
+      } as any);
+      vi.mocked(resolveFee.applyFreeShippingOffer).mockResolvedValue(700);
+
+      const res = await app.request("/api/orders/ord_1", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ wilayaId: 31, communeId: "31001" }),
+      });
+
+      expect(res.status).toBe(200);
+      expect(queries.updateOrderDetails).toHaveBeenCalledWith(mockDb, "ord_1", {
+        wilayaId: 31,
+        communeId: "31001",
+        deliveryFee: 700,
+      });
+    });
+
+    it("rejects a commune that belongs to another wilaya with 400", async () => {
+      vi.mocked(queries.getOrderById).mockResolvedValue(orderRow() as any);
+      mockDb = dbSelectReturning({ id: "999", wilayaId: 31 });
+
+      const res = await app.request("/api/orders/ord_1", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ communeId: "999" }),
+      });
+
+      expect(res.status).toBe(400);
+      const body: any = await res.json();
+      expect(body.code).toBe(ERROR_CODES.MISSING_WILAYA_COMMUNE);
+      expect(queries.updateOrderDetails).not.toHaveBeenCalled();
+    });
+
+    it("edits order lines (quantity + unit price)", async () => {
+      vi.mocked(queries.getOrderById).mockResolvedValue(
+        orderRow({
+          products: [
+            { id: "line_1", productId: "prod_1", variantId: null, quantity: 2, pricePerUnit: 4500 },
+          ],
+        }) as any
+      );
+      mockDb = dbSelectReturning({
+        id: "prod_1",
+        name: "Stickers",
+        price: 4500,
+        sku: "STICKERS-001",
+        trackInventory: false,
+      });
+
+      const res = await app.request("/api/orders/ord_1", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ products: [{ id: "line_1", quantity: 3, pricePerUnit: 4000 }] }),
+      });
+
+      expect(res.status).toBe(200);
+      expect(applyOrderLineEdits).toHaveBeenCalledWith(
+        mockDb,
+        "ord_1",
+        [
+          {
+            id: "line_1",
+            productId: "prod_1",
+            productName: "Stickers",
+            variantId: null,
+            variantLabel: null,
+            sku: "STICKERS-001",
+            quantity: 3,
+            pricePerUnit: 4000,
+            trackInventory: false,
+            previousProductId: "prod_1",
+            previousVariantId: null,
+            previousQuantity: 2,
+            previousTrackInventory: false,
+          },
+        ],
+        { id: "admin_user_001", name: "Admin User" }
+      );
+    });
+
+    it("derives the unit price from a single-line grand total", async () => {
+      vi.mocked(queries.getOrderById).mockResolvedValue(
+        orderRow({
+          deliveryFee: 600,
+          products: [
+            { id: "line_1", productId: "prod_1", variantId: null, quantity: 2, pricePerUnit: 4500 },
+          ],
+        }) as any
+      );
+      mockDb = dbSelectReturning({ trackInventory: false });
+
+      const res = await app.request("/api/orders/ord_1", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ total: 9600 }),
+      });
+
+      expect(res.status).toBe(200);
+      const edits = vi.mocked(applyOrderLineEdits).mock.calls[0][2];
+      expect(edits[0].quantity).toBe(2);
+      expect(edits[0].pricePerUnit).toBe(4500);
+    });
+
+    it("replaces a line's product and takes the new catalog price", async () => {
+      vi.mocked(queries.getOrderById).mockResolvedValue(
+        orderRow({
+          products: [
+            { id: "line_1", productId: "prod_old", variantId: "v_old", quantity: 1, pricePerUnit: 1000 },
+          ],
+        }) as any
+      );
+      mockDb = dbSelectReturning({
+        id: "prod_new",
+        name: "New Product",
+        price: 2500,
+        sku: "NEW-001",
+        trackInventory: false,
+      });
+
+      const res = await app.request("/api/orders/ord_1", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          products: [{ id: "line_1", productId: "prod_new", variantId: null }],
+        }),
+      });
+
+      expect(res.status).toBe(200);
+      const edits = vi.mocked(applyOrderLineEdits).mock.calls[0][2];
+      expect(edits[0]).toMatchObject({
+        id: "line_1",
+        productId: "prod_new",
+        productName: "New Product",
+        sku: "NEW-001",
+        quantity: 1,
+        pricePerUnit: 2500,
+        previousProductId: "prod_old",
+        previousVariantId: "v_old",
+        previousQuantity: 1,
+      });
+    });
+
+    it("rejects a single-value edit when the order has multiple lines", async () => {
+      vi.mocked(queries.getOrderById).mockResolvedValue(
+        orderRow({
+          products: [
+            { id: "l1", productId: "p1", variantId: null, quantity: 1, pricePerUnit: 1000 },
+            { id: "l2", productId: "p2", variantId: null, quantity: 1, pricePerUnit: 1000 },
+          ],
+        }) as any
+      );
+
+      const res = await app.request("/api/orders/ord_1", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ quantity: 5 }),
+      });
+
+      expect(res.status).toBe(400);
+      const body: any = await res.json();
+      expect(body.code).toBe(ERROR_CODES.REQUIRED_FIELD_MISSING);
+      expect(applyOrderLineEdits).not.toHaveBeenCalled();
+    });
+
+    it("returns 404 when the order does not exist", async () => {
+      vi.mocked(queries.getOrderById).mockResolvedValue(null as any);
+
+      const res = await app.request("/api/orders/missing", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ communeId: "16001" }),
+      });
+
+      expect(res.status).toBe(404);
+      const body: any = await res.json();
+      expect(body.code).toBe(ERROR_CODES.ORDER_NOT_FOUND);
+    });
+
+    it("returns 422 when the order is already dispatched", async () => {
+      vi.mocked(queries.getOrderById).mockResolvedValue(
+        orderRow({ trackingNumber: "NE999DZ" }) as any
+      );
+
+      const res = await app.request("/api/orders/ord_1", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ communeId: "16001" }),
+      });
+
+      expect(res.status).toBe(422);
+      const body: any = await res.json();
+      expect(body.code).toBe(ERROR_CODES.ORDER_ALREADY_DISPATCHED);
+    });
+
+    it("returns 422 for a locked status", async () => {
+      vi.mocked(queries.getOrderById).mockResolvedValue(
+        orderRow({ status: "delivered" }) as any
+      );
+
+      const res = await app.request("/api/orders/ord_1", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ communeId: "16001" }),
+      });
+
+      expect(res.status).toBe(422);
+      const body: any = await res.json();
+      expect(body.code).toBe(ERROR_CODES.INVALID_STATUS_TRANSITION);
+    });
+
+    it("returns 400 when no fields are supplied", async () => {
+      vi.mocked(queries.getOrderById).mockResolvedValue(orderRow() as any);
+
+      const res = await app.request("/api/orders/ord_1", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+
+      expect(res.status).toBe(400);
     });
   });
 });

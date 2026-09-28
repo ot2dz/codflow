@@ -20,6 +20,19 @@
     "warning": "Cette clé ne sera plus affichée. Copiez-la maintenant et partagez-la de manière sécurisée.",
     "done": "Terminé"
   },
+  "reset_password": "Réinitialiser le mot de passe",
+  "reset_password_dialog": {
+    "confirm_title": "Réinitialiser le mot de passe de {name} ?",
+    "confirm_description": "Le mot de passe actuel du membre cessera immédiatement de fonctionner. Un nouveau mot de passe temporaire est affiché une seule fois — transmettez-le et demandez-lui de le changer après connexion.",
+    "confirm_button": "Réinitialiser",
+    "title": "Mot de passe temporaire",
+    "subtitle": "pour {name}",
+    "warning": "Ce mot de passe ne sera plus affiché. Transmettez-le de façon sécurisée ; le membre doit le changer après connexion.",
+    "copied": "Mot de passe copié dans le presse-papiers",
+    "success": "Mot de passe réinitialisé",
+    "error": "Échec de la réinitialisation du mot de passe",
+    "done": "Terminé"
+  },
   "search_placeholder": "Rechercher des membres...",
   "table": {
     "name": "Nom",

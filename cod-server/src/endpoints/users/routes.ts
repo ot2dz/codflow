@@ -279,6 +279,40 @@ const rotateApiKeyRoute = defineRoute({
   handler: handlers.rotateApiKey,
 });
 
+const resetPasswordRoute = defineRoute({
+  method: "post",
+  path: "/{id}/reset-password",
+  auth: "admin",
+  tags: ["Users"],
+  summary: "Reset user password",
+  description:
+    "Generates a new temporary password for the member and replaces their current one. " +
+    "**Admin only. The temporary password is returned only once** — share it securely; " +
+    "the member should change it after signing in. Covers recovery when the original " +
+    "temp password was lost and email sending is not configured.",
+  operationId: "resetUserPassword",
+  params: idParams,
+  responses: {
+    200: {
+      description: "Password reset. The temporary password is shown only in this response.",
+      content: jsonContent(
+        z.object({
+          success: z.boolean().openapi({ example: true }),
+          data: z.object({
+            tempPassword: z.string().openapi({
+              description: "New temporary password — show once, cannot be retrieved again",
+              example: "a1b2c3d4e5f6g7h8i9j0",
+            }),
+          }),
+          message: z.string().openapi({ example: "Password reset. Share the temporary password with the user." }),
+        })
+      ),
+    },
+    404: { description: "User not found (or has no credential account)" },
+  },
+  handler: handlers.resetUserPassword,
+});
+
 // ─── Router ───────────────────────────────────────────────────────────────────
 
 const router = new OpenAPIHono<AppContext>();
@@ -291,5 +325,6 @@ router.openapi(updateUserRoleRoute.route, updateUserRoleRoute.handler);
 router.openapi(grantScopeRoute.route, grantScopeRoute.handler);
 router.openapi(revokeScopeRoute.route, revokeScopeRoute.handler);
 router.openapi(rotateApiKeyRoute.route, rotateApiKeyRoute.handler);
+router.openapi(resetPasswordRoute.route, resetPasswordRoute.handler);
 
 export default router;

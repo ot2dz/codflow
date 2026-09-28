@@ -14,6 +14,9 @@ const ALLOWED_TYPES = new Set([
   "image/gif",
 ]);
 
+/** R2 key namespaces this proxy upload may write to (mirrors presign). */
+const ALLOWED_FOLDERS = new Set(["products", "landing"]);
+
 const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
 
 function extFromMime(mime: string): string {
@@ -70,8 +73,11 @@ export async function uploadImage(c: Context<AppContext>) {
     );
   }
 
+  const folderRaw = String(formData.get("folder") ?? "products");
+  const folder = ALLOWED_FOLDERS.has(folderRaw) ? folderRaw : "products";
+
   const ext = extFromMime(file.type);
-  const key = `products/${crypto.randomUUID().replace(/-/g, "")}.${ext}`;
+  const key = `${folder}/${crypto.randomUUID().replace(/-/g, "")}.${ext}`;
 
   const arrayBuffer = await file.arrayBuffer();
 

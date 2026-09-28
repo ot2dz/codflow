@@ -15,6 +15,7 @@
  *  getLabelUrl        → GET    /api/v1/get/order/label?tracking=  (returns PDF)
  *  createShipmentsBulk→ POST   /api/v1/create/orders     (JSON body, object-keyed)
  *  getStopDesks       → GET    /api/v1/get/communes       (filter has_stop_desk===1)
+ *  getGeoNames        → GET    /api/v1/get/wilayas + /get/communes (full lists)
  */
 
 import type {
@@ -26,6 +27,8 @@ import type {
   TrackingEvent,
   StopDesk,
   ConnectionCheck,
+  CarrierProduct,
+  CarrierProductsPage,
 } from "../types";
 import { EcoTrackApiError, ecotrackBusinessError, ecotrackHttpError } from "./errors";
 import type {
@@ -52,6 +55,7 @@ import type {
   EcotrackMyDesk,
   EcotrackOtherDesk,
   EcotrackDesksResponse,
+  EcotrackProductsListResponse,
 } from "./types";
 
 export class EcotrackProvider implements DeliveryProvider {
@@ -378,7 +382,14 @@ export class EcotrackProvider implements DeliveryProvider {
     if (input.reference)          params.set("reference",    input.reference);
     if (input.stationCode)        params.set("code_postal",  input.stationCode);
     if (input.stopDesk != null)   params.set("stop_desk",    input.stopDesk ? "1" : "0");
-    if (input.productDescription) params.set("produit",      input.productDescription);
+    if (input.stockProducts && input.stockProducts.length > 0) {
+      // Fulfil from stock the carrier holds: references (= our SKUs) + quantities.
+      params.set("stock",    "1");
+      params.set("produit",  input.stockProducts.map((p) => p.reference).join(","));
+      params.set("quantite", input.stockProducts.map((p) => p.quantity).join(","));
+    } else if (input.productDescription) {
+      params.set("produit", input.productDescription);
+    }
     if (input.remarks)            params.set("remarque",     input.remarks);
     if (input.weight != null)     params.set("weight",       String(input.weight));
     if (input.fragile != null)    params.set("fragile",      input.fragile ? "1" : "0");
@@ -397,6 +408,41 @@ export class EcotrackProvider implements DeliveryProvider {
       labelUrl: this.getLabelUrl(res.tracking),
       rawResponse: res,
     };
+  }
+
+  /**
+   * Fetch the products the carrier holds in its own stock (display mirror).
+   * GET /api/v1/get/products/list?page=N — Laravel paginated (15/page).
+   * Numbers may arrive as strings; coerce defensively.
+   */
+  async getProducts(page = 1): Promise<CarrierProductsPage> {
+    const params = new URLSearchParams({ page: String(page) });
+    const res = await this.request<EcotrackProductsListResponse>(
+      "GET",
+      `/api/v1/get/products/list?${params.toString()}`
+    );
+
+    const num = (v: unknown): number => {
+      const n = typeof v === "string" ? Number(v) : typeof v === "number" ? v : 0;
+      return Number.isFinite(n) ? n : 0;
+    };
+
+    const products: CarrierProduct[] = (Array.isArray(res.products) ? res.products : [])
+      .map((p) => ({
+        reference: p.reference ?? "",
+        barcode: p.barcode ?? null,
+        title: p.title ?? null,
+        isActive: p.is_active === undefined ? true : Boolean(p.is_active),
+        image: p.image ?? null,
+        stockDisponible: num(p.stock_disponible),
+        stockReserve: num(p.stock_reserve),
+        stockPhysique: num(p.stock_phisique),
+      }))
+      .filter((p) => p.reference !== "");
+
+    const current = num(res.pagination?.current_page) || page;
+    const last = num(res.pagination?.last_page) || current;
+    return { products, page: current, lastPage: last };
   }
 
   /**
@@ -633,5 +679,38 @@ export class EcotrackProvider implements DeliveryProvider {
         commune:  null,
         wilayaId: c.wilaya_id,
       }));
+  }
+
+  /**
+   * The tenant's own wilaya + commune name lists — the exact strings it
+   * matches parcel addresses against (GET /get/wilayas + GET /get/communes,
+   * full lists, no stop-desk filter). Feeds the per-carrier geo-name map so a
+   * dispatch sends the carrier's spelling (e.g. "Souma" not our "Soumaa")
+   * instead of being refused as `Commune mal écrite`.
+   *
+   * Commune `id`s are synthetic: the API keys entries by index and publishes
+   * no stable commune id. Matching downstream is by NAME within a wilaya, so
+   * any unique id is sufficient.
+   */
+  async getGeoNames(): Promise<{
+    wilayas: Array<{ id: number; name: string }>;
+    communes: Array<{ id: number; name: string; wilayaId: number }>;
+  }> {
+    const wilayasRes = await this.request<EcotrackWilayasResponse>("GET", "/api/v1/get/wilayas");
+    const wilayas = (Array.isArray(wilayasRes) ? wilayasRes : []).map((w) => ({
+      id: w.wilaya_id,
+      name: w.wilaya_name,
+    }));
+
+    const communesRes = await this.request<EcotrackCommunesResponse>("GET", "/api/v1/get/communes");
+    const communes = Object.values(communesRes ?? {})
+      .filter((c) => c != null && c.nom)
+      .map((c, index) => ({
+        id: index + 1,
+        name: c.nom,
+        wilayaId: c.wilaya_id,
+      }));
+
+    return { wilayas, communes };
   }
 }

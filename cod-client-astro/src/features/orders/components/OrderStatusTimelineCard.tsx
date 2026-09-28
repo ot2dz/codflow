@@ -1,6 +1,7 @@
 import { Check, Phone, Zap } from "lucide-react";
-import { Card } from "@/components/ui";
+import { Card, Select } from "@/components/ui";
 import { useT } from "@/i18n/react";
+import { FILTER_STATUSES } from "@/features/orders/model";
 import type { OrderDetail, OrderStatus } from "@/features/orders/types";
 
 interface OrderStatusTimelineCardProps {
@@ -8,6 +9,9 @@ interface OrderStatusTimelineCardProps {
   timeline: OrderDetail["statusHistory"];
   effectiveStatus: OrderStatus;
   locale: string;
+  canEdit: boolean;
+  busy: boolean;
+  onChangeStatus: (status: OrderStatus) => void | Promise<void>;
 }
 
 export function OrderStatusTimelineCard({
@@ -15,12 +19,40 @@ export function OrderStatusTimelineCard({
   timeline,
   effectiveStatus,
   locale,
+  canEdit,
+  busy,
+  onChangeStatus,
 }: OrderStatusTimelineCardProps) {
   const t = useT("orders");
 
   return (
     <Card title={t("detail.status_timeline")}>
       <div className="space-y-3">
+        {canEdit && (
+          <label className="flex items-center justify-between gap-3 rounded-lg border border-input bg-background px-3 py-2">
+            <span className="shrink-0 text-xs font-semibold text-muted-foreground">
+              {t("detail.manual_status_label")}
+            </span>
+            <Select
+              aria-label={t("detail.manual_status_label")}
+              value={effectiveStatus}
+              disabled={busy}
+              onChange={(event) =>
+                void onChangeStatus(event.currentTarget.value as OrderStatus)
+              }
+              variant="bare"
+              size="sm"
+              wrapperClassName="min-w-0"
+              triggerClassName="min-w-0"
+            >
+              {FILTER_STATUSES.map((status) => (
+                <option key={status} value={status}>
+                  {t(`status.${status}`)}
+                </option>
+              ))}
+            </Select>
+          </label>
+        )}
         {statusFlow.map((flowStatus) => {
           const historyItem = timeline.find(
             (item) => item.status === flowStatus,

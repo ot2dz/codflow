@@ -5,7 +5,7 @@
  */
 
 import { eq, and, like, desc, count, notInArray } from "drizzle-orm";
-import { deliveryCompanies, orders } from "../db/schema";
+import { deliveryCompanies, orders, carrierProducts } from "../db/schema";
 import type { AppDb } from "../db/client";
 
 export interface DeliveryCompanyFilters {
@@ -45,6 +45,7 @@ export interface UpdateDeliveryCompanyData {
   supportsStopDesk?: boolean;
   supportsTracking?: boolean;
   autoValidate?: boolean;
+  stockFulfillment?: boolean;
   notes?: string | null;
 }
 
@@ -191,4 +192,61 @@ export async function deleteDeliveryCompany(db: AppDb, id: string) {
 
   await db.delete(deliveryCompanies).where(eq(deliveryCompanies.id, id));
   return true;
+}
+
+// ─── Carrier products (stock held at the carrier) ─────────────────────────────
+
+export interface CarrierProductRow {
+  reference: string;
+  barcode?: string | null;
+  title?: string | null;
+  isActive?: boolean;
+  image?: string | null;
+  stockDisponible?: number;
+  stockReserve?: number;
+  stockPhysique?: number;
+}
+
+/**
+ * Replace the cached carrier-product mirror for a company with a fresh pull.
+ * Display-only — dispatch never reads this; it sends each order line's SKU as
+ * the carrier reference and lets the carrier refuse out-of-stock parcels.
+ */
+export async function replaceCarrierProducts(
+  db: AppDb,
+  companyId: string,
+  rows: CarrierProductRow[],
+) {
+  const now = new Date().toISOString();
+  await db.delete(carrierProducts).where(eq(carrierProducts.companyId, companyId));
+  if (rows.length === 0) return 0;
+
+  const values = rows.map((r) => ({
+    id: crypto.randomUUID(),
+    companyId,
+    reference: r.reference,
+    barcode: r.barcode ?? null,
+    title: r.title ?? null,
+    isActive: r.isActive ?? true,
+    image: r.image ?? null,
+    stockDisponible: r.stockDisponible ?? 0,
+    stockReserve: r.stockReserve ?? 0,
+    stockPhysique: r.stockPhysique ?? 0,
+    syncedAt: now,
+  }));
+
+  // D1-safe insert batching (keeps the statement within row/size limits).
+  const chunkSize = 50;
+  for (let i = 0; i < values.length; i += chunkSize) {
+    await db.insert(carrierProducts).values(values.slice(i, i + chunkSize));
+  }
+  return values.length;
+}
+
+export async function listCarrierProducts(db: AppDb, companyId: string) {
+  return db
+    .select()
+    .from(carrierProducts)
+    .where(eq(carrierProducts.companyId, companyId))
+    .all();
 }

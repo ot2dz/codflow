@@ -117,6 +117,13 @@ export interface DeliveryCompany {
    */
   autoValidate: boolean;
 
+  /**
+   * When true, dispatch fulfils from stock the carrier holds (EcoTrack stock=1),
+   * keyed by each order line's SKU. The carrier refuses out-of-stock parcels;
+   * CodFlow local inventory is unaffected.
+   */
+  stockFulfillment: boolean;
+
   notes: string | null;
 
   // Webhook integration
@@ -129,6 +136,26 @@ export interface DeliveryCompany {
 
   createdAt: string;
   updatedAt: string;
+}
+
+/** A product the carrier holds in its own stock (dashboard mirror). */
+export interface CarrierProduct {
+  id: string;
+  reference: string;
+  barcode: string | null;
+  title: string | null;
+  isActive: boolean;
+  image: string | null;
+  stockDisponible: number;
+  stockReserve: number;
+  stockPhysique: number;
+  syncedAt: string;
+}
+
+export interface CarrierProductsResult {
+  products: CarrierProduct[];
+  total: number;
+  syncedAt: string | null;
 }
 
 /** A stop desk / pickup point returned by GET /api/delivery-companies/:id/stop-desks. */

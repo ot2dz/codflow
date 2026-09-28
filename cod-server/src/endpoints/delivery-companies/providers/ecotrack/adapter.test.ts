@@ -443,6 +443,26 @@ describe("EcotrackProvider.getStopDesks", () => {
     const call = server.callsFor("/api/v1/get/communes")[0];
     expect(call.method).toBe("GET");
   });
+
+  it("getGeoNames returns the tenant's full wilaya + commune lists", async () => {
+    const geo = await provider.getGeoNames();
+
+    expect(geo.wilayas).toEqual(
+      expect.arrayContaining([
+        { id: 9, name: "Blida" },
+        { id: 16, name: "Alger" },
+      ]),
+    );
+    expect(geo.communes).toHaveLength(12);
+    expect(geo.communes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: "Alger Centre", wilayaId: 16 }),
+        expect.objectContaining({ name: "Abadla", wilayaId: 1 }),
+      ]),
+    );
+    // Synthetic ids must be unique (matching is by name, so any unique id works).
+    expect(new Set(geo.communes.map((c) => c.id)).size).toBe(geo.communes.length);
+  });
 });
 
 describe("EcotrackProvider.createShipmentsBulk", () => {
@@ -1089,5 +1109,85 @@ describe("EcotrackProvider error typing", () => {
     expect(err).toBeInstanceOf(EcoTrackApiError);
     expect((err as EcoTrackApiError).statusCode).toBe(502);
     expect((err as EcoTrackApiError).message).toMatch(/not valid JSON/);
+  });
+});
+
+describe("EcotrackProvider.getProducts (carrier-held stock)", () => {
+  let server: EcotrackMockServer;
+  let provider: EcotrackProvider;
+  let originalFetch: typeof fetch;
+
+  beforeEach(() => {
+    server = createEcotrackMockServer({ token: TOKEN });
+    provider = new EcotrackProvider(TOKEN, server.baseUrl);
+    originalFetch = global.fetch;
+    global.fetch = server.fetch as unknown as typeof fetch;
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  it("parses products + pagination and coerces numeric fields", async () => {
+    const res = await provider.getProducts(1);
+
+    expect(res.page).toBe(1);
+    expect(res.lastPage).toBe(1);
+    expect(res.products).toHaveLength(1);
+    expect(res.products[0]).toEqual({
+      reference: "290444",
+      barcode: null,
+      title: "kas",
+      isActive: true,
+      image: null,
+      stockDisponible: 1,
+      stockReserve: 1,
+      stockPhysique: 2,
+    });
+
+    const call = server.callsFor("/api/v1/get/products/list")[0];
+    expect(call.method).toBe("GET");
+    expect(call.searchParams.get("page")).toBe("1");
+  });
+});
+
+describe("EcotrackProvider.createShipment — carrier stock fulfillment", () => {
+  let server: EcotrackMockServer;
+  let provider: EcotrackProvider;
+  let originalFetch: typeof fetch;
+
+  beforeEach(() => {
+    server = createEcotrackMockServer({ token: TOKEN });
+    provider = new EcotrackProvider(TOKEN, server.baseUrl);
+    originalFetch = global.fetch;
+    global.fetch = server.fetch as unknown as typeof fetch;
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  it("sends stock=1 with comma-separated produit refs + matching quantite", async () => {
+    await provider.createShipment({
+      ...baseInput,
+      stockProducts: [
+        { reference: "STICKERS-BOYS-001", quantity: 2 },
+        { reference: "STICKERS-GIRLS-001", quantity: 1 },
+      ],
+    });
+
+    const params = server.callsFor("/api/v1/create/order")[0].searchParams;
+    expect(params.get("stock")).toBe("1");
+    expect(params.get("produit")).toBe("STICKERS-BOYS-001,STICKERS-GIRLS-001");
+    expect(params.get("quantite")).toBe("2,1");
+  });
+
+  it("does NOT set stock/quantite when stockProducts is absent", async () => {
+    await provider.createShipment(baseInput);
+
+    const params = server.callsFor("/api/v1/create/order")[0].searchParams;
+    expect(params.has("stock")).toBe(false);
+    expect(params.has("quantite")).toBe(false);
+    expect(params.get("produit")).toBe("T-shirt");
   });
 });

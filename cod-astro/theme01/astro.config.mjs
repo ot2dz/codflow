@@ -102,7 +102,7 @@ export default defineConfig({
           // vite.environments.ssr — the legacy vite.ssr.optimizeDeps key is
           // ignored by Vite 8 here.
           noDiscovery: true,
-          exclude: ["astro/assets/services/noop", "astro-icon/components"],
+          exclude: ["astro/assets/services/noop", "astro-icon/components", "astro/zod"],
         },
       },
     },

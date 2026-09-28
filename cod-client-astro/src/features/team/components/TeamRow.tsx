@@ -1,4 +1,4 @@
-import { Activity, Crown, KeyRound, MoreHorizontal, Shield, Users } from "lucide-react";
+import { Activity, Crown, KeyRound, KeySquare, MoreHorizontal, Shield, Users } from "lucide-react";
 import {
   Badge,
   DropdownItem,
@@ -36,11 +36,13 @@ function MemberActionsMenu({
   onView,
   onManageScopes,
   onRotateApiKey,
+  onResetPassword,
 }: {
   member: TeamMember;
   onView: (member: TeamMember) => void;
   onManageScopes: (member: TeamMember) => void;
   onRotateApiKey: (member: TeamMember) => void;
+  onResetPassword: (member: TeamMember) => void;
 }) {
   const t = useT("team");
   const common = useT("common");
@@ -57,6 +59,10 @@ function MemberActionsMenu({
         <Shield size={15} />
         {t("manage_permissions")}
       </DropdownItem>
+      <DropdownItem onClick={() => onResetPassword(member)}>
+        <KeySquare size={15} />
+        {t("reset_password")}
+      </DropdownItem>
       <DropdownItem onClick={() => onRotateApiKey(member)}>
         <KeyRound size={15} />
         {t("rotate_api_key")}
@@ -70,11 +76,13 @@ export function TeamDesktopRow({
   onView,
   onManageScopes,
   onRotateApiKey,
+  onResetPassword,
 }: {
   member: TeamMember;
   onView: (member: TeamMember) => void;
   onManageScopes: (member: TeamMember) => void;
   onRotateApiKey: (member: TeamMember) => void;
+  onResetPassword: (member: TeamMember) => void;
 }) {
   const t = useT("team");
   const common = useT("common");
@@ -113,6 +121,7 @@ export function TeamDesktopRow({
           onView={onView}
           onManageScopes={onManageScopes}
           onRotateApiKey={onRotateApiKey}
+          onResetPassword={onResetPassword}
         />
       </TableCell>
     </TableRow>
@@ -124,11 +133,13 @@ export function TeamMobileCard({
   onView,
   onManageScopes,
   onRotateApiKey,
+  onResetPassword,
 }: {
   member: TeamMember;
   onView: (member: TeamMember) => void;
   onManageScopes: (member: TeamMember) => void;
   onRotateApiKey: (member: TeamMember) => void;
+  onResetPassword: (member: TeamMember) => void;
 }) {
   const t = useT("team");
   return (
@@ -147,6 +158,7 @@ export function TeamMobileCard({
               onView={onView}
               onManageScopes={onManageScopes}
               onRotateApiKey={onRotateApiKey}
+              onResetPassword={onResetPassword}
             />
           </div>
           <p className="mt-0.5 truncate text-sm text-muted-foreground" dir="ltr">

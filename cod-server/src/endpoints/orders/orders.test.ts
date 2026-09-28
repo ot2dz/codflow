@@ -616,6 +616,54 @@ describe("Orders — targeted business-logic tests", () => {
       );
     });
 
+    it("EcoTrack dispatch resolves the carrier's exact geo strings (e.g. Soumaa → Souma)", async () => {
+      vi.mocked(queries.getOrderById).mockResolvedValue(
+        orderRow({ status: "ready", wilayaId: 9, communeId: "c-09-011" }) as any
+      );
+      vi.mocked(deliveryCompanyQueries.getDeliveryCompanyRaw).mockResolvedValue(
+        companyRow({ code: "packers_ecotrack", autoValidate: false }) as any
+      );
+      vi.mocked(shipments.createShipmentRecord).mockResolvedValue("shp_1" as any);
+      vi.mocked(shipments.logApiCall).mockResolvedValue(undefined as any);
+      vi.mocked(queries.updateOrderTracking).mockResolvedValue(undefined as any);
+      vi.mocked(queries.updateOrderStatus).mockResolvedValue(undefined as any);
+      vi.mocked(carrierGeo.resolveCarrierWilayaName).mockResolvedValue("Blida");
+      vi.mocked(carrierGeo.resolveCarrierCommuneName).mockResolvedValue("Souma");
+
+      const mockProvider = {
+        createShipment: vi.fn(async () => ({
+          trackingNumber: "PK-TEST01",
+          labelUrl: null,
+          rawResponse: "{}",
+        })),
+        validateShipment: vi.fn(async () => true),
+      };
+      vi.mocked(registry.getProvider).mockReturnValue(mockProvider as any);
+      vi.mocked(registry.isEcotrackCompany).mockReturnValue(true);
+
+      mockDb = {
+        select: vi.fn(() => ({
+          from: vi.fn(() => ({
+            where: vi.fn(() => ({
+              get: vi.fn(async () => ({ name: "Soumaa", nameAr: "صومعة" })),
+            })),
+          })),
+        })),
+        insert: vi.fn(() => ({ values: vi.fn(async () => undefined) })),
+        update: vi.fn(() => ({ set: vi.fn(() => ({ where: vi.fn(async () => undefined) })) })),
+      };
+
+      const res = await app.request("/api/orders/ord_1/dispatch", { method: "POST" });
+
+      expect(res.status).toBe(201);
+      expect(mockProvider.createShipment).toHaveBeenCalledWith(
+        expect.objectContaining({ wilaya: "Blida", commune: "Souma" })
+      );
+      expect(carrierGeo.resolveCarrierCommuneName).toHaveBeenCalledWith(
+        expect.anything(), "packers_ecotrack", "c-09-011"
+      );
+    });
+
     it("non-yalidine carriers keep reference-table names (no geo resolution)", async () => {
       vi.mocked(queries.getOrderById).mockResolvedValue(orderRow({ status: "ready" }) as any);
       vi.mocked(deliveryCompanyQueries.getDeliveryCompanyRaw).mockResolvedValue(

@@ -106,12 +106,12 @@ export function InviteDialog({ open, onClose, onSuccess }: Props) {
     }));
   }
 
-  function toggleAllInGroup(scopes: readonly string[], allChecked: boolean) {
+  function toggleAllInGroup(scopes: readonly string[], shouldSelect: boolean) {
     setForm((current) => ({
       ...current,
-      scopes: allChecked
-        ? current.scopes.filter((s) => !scopes.includes(s))
-        : [...new Set([...current.scopes, ...scopes])],
+      scopes: shouldSelect
+        ? [...new Set([...current.scopes, ...scopes])]
+        : current.scopes.filter((s) => !scopes.includes(s)),
     }));
   }
 

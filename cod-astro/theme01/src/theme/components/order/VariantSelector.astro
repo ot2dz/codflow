@@ -27,45 +27,41 @@ function firstInStockIdx(optName: string): number {
 ---
 
 {product.hasVariants && product.variantOptions && product.variants.length > 0 && (
-  <div class="space-y-4">
+  <div class="variant-selector">
     {product.variantOptions.map((opt) => {
       const defaultIdx = firstInStockIdx(opt.name);
+      const selectedValue = opt.values[defaultIdx]?.value ?? "";
       return (
-        <div class="space-y-2">
-          <span class="text-[0.75rem] font-black uppercase tracking-widest" style="color: var(--clr-text-2)">{opt.name}</span>
-          <!-- -mx-6 px-6 lets the scroll bleed to card edges without clipping -->
-          <div class="flex gap-2 overflow-x-auto -mx-6 px-6 pb-1 scrollbar-hide">
+        <div class="variant-group" data-variant-group data-option-group={opt.name}>
+          <div class="variant-group-head">
+            <span class="variant-group-name">{opt.name}</span>
+            <span class="variant-group-sep" aria-hidden="true">:</span>
+            <span class="variant-group-value" data-selected-value>{selectedValue}</span>
+          </div>
+          <div class="variant-options" role="radiogroup" aria-label={opt.name}>
             {opt.values.map((val, vi) => {
               const oos = isValueOos(opt.name, val.value);
+              const isDefault = vi === defaultIdx && !oos;
               return (
                 <button
                   type="button"
-                  class:list={[
-                    "variant-opt shrink-0 flex items-center gap-2 h-10 px-4 rounded-xl border-2 transition-all duration-200 whitespace-nowrap",
-                    oos
-                      ? "opacity-40 cursor-not-allowed line-through"
-                      : "active:scale-95"
-                  ]}
-                  style="border-color: var(--clr-border); background: var(--clr-surface); color: var(--clr-text-2)"
+                  class:list={["variant-opt", isDefault && "selected"]}
+                  role="radio"
+                  aria-checked={isDefault ? "true" : "false"}
                   data-option={opt.name}
                   data-value={val.value}
-                  data-first={vi === defaultIdx && !oos ? "1" : ""}
+                  data-first={isDefault ? "1" : ""}
                   data-oos={oos ? "1" : ""}
                   aria-label={val.value}
                   aria-disabled={oos ? "true" : undefined}
                 >
                   {val.hexColor && (
-                    <span
-                      class="w-[1.125rem] h-[1.125rem] rounded-full shrink-0 border border-black/10 shadow-sm"
-                      style={`background: ${val.hexColor}${oos ? "; opacity: 0.4" : ""}`}
-                    ></span>
+                    <span class="variant-swatch" style={`background:${val.hexColor}`}></span>
                   )}
-                  <span class="font-bold text-[0.875rem] leading-none">{val.value}</span>
-                  {!oos && (
-                    <span class="check-icon opacity-0 transition-opacity duration-200 shrink-0 text-[var(--clr-primary)]">
-                      <Icon name="heroicons:check" class="w-3 h-3" />
-                    </span>
-                  )}
+                  <span class="variant-label">{val.value}</span>
+                  <span class="variant-check" aria-hidden="true">
+                    <Icon name="heroicons:check" class="w-3 h-3" />
+                  </span>
                 </button>
               );
             })}

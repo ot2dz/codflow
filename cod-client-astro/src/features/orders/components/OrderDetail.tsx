@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertCircle, X } from "lucide-react";
+import { AlertCircle, PackagePlus, Pencil, X } from "lucide-react";
 import {
   canScope,
   useIdentity,
@@ -32,6 +32,7 @@ import {
   canAssignOrder,
   canDeleteOrderFromDetail,
   canDispatchOrder,
+  canEditOrder,
   detailStatusActions,
   dispatchFieldSupport,
   orderStatusFlow,
@@ -50,6 +51,8 @@ import { OrderDeliveryCard } from "@/features/orders/components/OrderDeliveryCar
 import { OrderStatusTimelineCard } from "@/features/orders/components/OrderStatusTimelineCard";
 import { OrderShipmentActionsCard } from "@/features/orders/components/OrderShipmentActionsCard";
 import { OrderMobileActionBar } from "@/features/orders/components/OrderMobileActionBar";
+import { EditOrderDialog } from "@/features/orders/components/EditOrderDialog";
+import { AddOrderProductDialog } from "@/features/orders/components/AddOrderProductDialog";
 
 export function OrderDetail({ orderId }: { orderId: string }) {
   const t = useT("orders");
@@ -65,6 +68,8 @@ export function OrderDetail({ orderId }: { orderId: string }) {
   const [status, setStatus] = useState<OrderStatus | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [editOrderOpen, setEditOrderOpen] = useState(false);
+  const [addProductOpen, setAddProductOpen] = useState(false);
 
   async function load() {
     setError(null);
@@ -207,6 +212,10 @@ export function OrderDetail({ orderId }: { orderId: string }) {
   }
 
   async function changeOrderStatus(next: OrderStatus) {
+    if (next === "confirmed" && !order?.communeId) {
+      notify.error(t("detail.error_commune_required"));
+      return;
+    }
     if (
       ["out_for_delivery", "delivered", "returned", "cancelled"].includes(next)
     ) {
@@ -226,7 +235,7 @@ export function OrderDetail({ orderId }: { orderId: string }) {
       ? statusMessage.replace("{status}", t(`status.${next}`))
       : `${statusMessage}${t(`status.${next}`)}`;
     await run(
-      () => updateOrderStatus(orderId, next),
+      () => updateOrderStatus(orderId, next, { override: true }),
       localizedStatusMessage,
       t("detail.error_status"),
       () => setStatus(next),
@@ -299,6 +308,32 @@ export function OrderDetail({ orderId }: { orderId: string }) {
               status={effectiveStatus ?? order.status}
               webhook={order.statusHistory[0]?.by?.startsWith("webhook:")}
             />
+            {canScope(identity, "orders:update") && canEditOrder(order) && (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setAddProductOpen(true)}
+                disabled={busy}
+              >
+                <PackagePlus size={16} />
+                <span className="hidden sm:inline">
+                  {t("detail.add_product")}
+                </span>
+              </Button>
+            )}
+            {canScope(identity, "orders:update") && canEditOrder(order) && (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setEditOrderOpen(true)}
+                disabled={busy}
+              >
+                <Pencil size={16} />
+                <span className="hidden sm:inline">
+                  {t("detail.edit_order")}
+                </span>
+              </Button>
+            )}
             {canScope(identity, "orders:delete") &&
               canDeleteOrderFromDetail(effectiveStatus ?? order.status) && (
                 <Button
@@ -335,6 +370,9 @@ export function OrderDetail({ orderId }: { orderId: string }) {
             timeline={timeline}
             effectiveStatus={effectiveStatus ?? order.status}
             locale={locale}
+            canEdit={canScope(identity, "orders:update")}
+            busy={busy}
+            onChangeStatus={changeOrderStatus}
           />
           <OrderShipmentActionsCard
             order={order}
@@ -392,6 +430,25 @@ export function OrderDetail({ orderId }: { orderId: string }) {
           />
         </div>
       </div>
+
+      {editOrderOpen && (
+        <EditOrderDialog
+          order={order}
+          onClose={() => setEditOrderOpen(false)}
+          onChanged={load}
+          onError={setError}
+        />
+      )}
+
+      {addProductOpen && (
+        <AddOrderProductDialog
+          orderId={order.id}
+          orderNumber={order.orderNumber}
+          onClose={() => setAddProductOpen(false)}
+          onChanged={load}
+          onError={setError}
+        />
+      )}
 
       <OrderMobileActionBar
         order={order}
