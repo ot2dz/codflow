@@ -697,7 +697,7 @@ export async function createStoreOrder(
   // unit price. The client's pricePerUnit is display-only and NEVER trusted —
   // it reaches this function over plain HTTP and is trivially editable.
   const catalogPriceRow = await db
-    .select({ price: products.price, trackInventory: products.trackInventory })
+    .select({ price: products.price, trackInventory: products.trackInventory, freeShipping: products.freeShipping })
     .from(products)
     .where(and(eq(products.id, data.productId), isNull(products.deletedAt)))
     .get();
@@ -724,7 +724,9 @@ export async function createStoreOrder(
   );
 
   const finalDeliveryFee =
-    activeOffer?.discountType === "free_shipping" ? 0 : data.deliveryFee;
+    activeOffer?.discountType === "free_shipping" || catalogPriceRow?.freeShipping === true
+      ? 0
+      : data.deliveryFee;
 
   const lineRows: Array<typeof orderProducts.$inferInsert> = [];
 

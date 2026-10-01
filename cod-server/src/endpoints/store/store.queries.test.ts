@@ -177,6 +177,25 @@ describe("createStoreOrder", () => {
     expect(result).toMatchObject({ deliveryFee: 0, price: 3000 });
   });
 
+  it("free shipping product → delivery fee zeroed without an offer", async () => {
+    const db = makeMockDb([
+      f({ price: 1500, track_inventory: 1, free_shipping: 1 }), // catalog row is free-shipping
+      a([]),                             // offers — none
+      f({ sku: "TS-001" }),              // SKU
+      f({ track_inventory: 1 }),         // trackInventory
+      f({ inventory: 10 }),              // inventory
+    ]);
+
+    const result = await createStoreOrder(db, {
+      ...baseOrder,
+      customerId: "cust_1",
+      customerName: "Fatima Zahra",
+      deliveryFee: 400,
+    });
+
+    expect(result).toMatchObject({ deliveryFee: 0, price: 3000 });
+  });
+
   it("adds the reward line and reward deduction for a free-product offer", async () => {
     const offer = offerRow({
       id: "offer_b2g1",
