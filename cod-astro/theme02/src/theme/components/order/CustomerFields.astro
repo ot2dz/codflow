@@ -1,0 +1,123 @@
+---
+import Select from "@/theme/components/ui/Select.astro";
+import { Icon } from "astro-icon/components";
+import { WILAYAS } from "@/core/data/wilayas";
+
+interface Props {
+  content: any;
+  fieldErrors: any;
+  isRTL: boolean;
+  showCommune?: boolean;
+  showAddress?: boolean;
+}
+
+const { content, fieldErrors, isRTL, showCommune = true, showAddress = true } = Astro.props;
+---
+
+<div class="competitor-inputs-grid">
+  <!-- Name Field -->
+  <div class="field">
+    <div class:list={["competitor-input-wrapper", fieldErrors.customerName && "!border-red-500"]}>
+      <span class="input-icon" aria-hidden="true">
+        <Icon name="heroicons:user" class="w-5 h-5" />
+      </span>
+      <input
+        id="f-name"
+        type="text"
+        name="customerName"
+        required
+        autocomplete="name"
+        placeholder={content.formNamePlaceholder}
+        aria-label={content.formNameLabel}
+      />
+    </div>
+    {fieldErrors.customerName && (
+      <p class="text-[0.75rem] text-red-500 font-bold mt-1.5 ps-1">{fieldErrors.customerName[0]}</p>
+    )}
+  </div>
+
+  <!-- Phone Field -->
+  <div class="field">
+    <div class:list={["competitor-input-wrapper", fieldErrors.phone && "!border-red-500"]}>
+      <span class="input-icon" aria-hidden="true">
+        <Icon name="heroicons:phone" class="w-5 h-5" />
+      </span>
+      <input
+        id="f-phone"
+        type="tel"
+        name="phone"
+        required
+        autocomplete="tel"
+        inputmode="tel"
+        placeholder={content.formPhonePlaceholder}
+        aria-label={content.formPhoneLabel}
+        dir="ltr"
+      />
+    </div>
+    {fieldErrors.phone && (
+      <p class="text-[0.75rem] text-red-500 font-bold mt-1.5 ps-1">{fieldErrors.phone[0]}</p>
+    )}
+  </div>
+
+  <!-- Wilaya Select -->
+  <div class:list={["field", !showCommune && "field-full"]}>
+    <Select
+      id="f-wilaya"
+      name="wilayaId"
+      label={content.formWilayaLabel}
+      placeholder={content.formWilayaPlaceholder}
+      searchPlaceholder={content.searchLabel}
+      noResultsText={content.noResultsLabel}
+      required={true}
+      error={fieldErrors.wilayaId?.[0]}
+      options={WILAYAS.map(w => ({
+        value: w.id,
+        label: `${w.id.toString().padStart(2, "0")} — ${isRTL ? w.nameAr : w.name}`
+      }))}
+    />
+    {fieldErrors.wilayaId && (
+      <p class="text-[0.75rem] text-red-500 font-bold mt-1.5 ps-1">{fieldErrors.wilayaId[0]}</p>
+    )}
+  </div>
+
+  <!-- Commune Select (conditional) -->
+  {showCommune && (
+    <div class="field">
+      <Select
+        id="f-commune"
+        name="communeId"
+        label={content.formCommuneLabel}
+        placeholder={content.formCommuneDisabled}
+        searchPlaceholder={content.searchLabel}
+        noResultsText={content.noResultsLabel}
+        required={true}
+        error={fieldErrors.communeId?.[0]}
+        options={[]}
+        dynamic={true}
+      />
+      {fieldErrors.communeId && (
+        <p class="text-[0.75rem] text-red-500 font-bold mt-1.5 ps-1">{fieldErrors.communeId[0]}</p>
+      )}
+    </div>
+  )}
+
+  <input type="hidden" name="deliveryType" value="home" />
+
+  <!-- Address Field -->
+  <div id="address-field-container" class:list={["field field-full", !showAddress && "hidden"]}>
+    <div class="competitor-input-wrapper">
+      <span class="input-icon" aria-hidden="true">
+        <Icon name="heroicons:map-pin" class="w-5 h-5" />
+      </span>
+      <input
+        id="f-address"
+        type="text"
+        name="address"
+        autocomplete="street-address"
+        placeholder={content.formAddressPlaceholder}
+        aria-label={content.formAddressLabel}
+      />
+    </div>
+  </div>
+
+</div>

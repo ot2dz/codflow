@@ -1,0 +1,69 @@
+---
+import type { Product } from "@/core/api/types";
+import { Icon } from "astro-icon/components";
+
+interface Props {
+  product: Product;
+  basePrice: number;
+  comparePrice: number | null;
+  discountPct: number;
+  cur: string;
+  isLowStock: boolean;
+  lowStockText: string;
+  freeShippingBadge: string;
+}
+
+const {
+  product,
+  basePrice,
+  comparePrice,
+  discountPct,
+  cur,
+  isLowStock,
+  lowStockText,
+  freeShippingBadge,
+} = Astro.props;
+
+const hasDiscount = comparePrice != null && comparePrice > basePrice;
+
+function fmt(n: number) {
+  return n.toLocaleString("ar-DZ");
+}
+---
+
+<div class="product-info">
+  <div class="product-info-head">
+    <div class="product-info-main">
+      <h1 class="product-title">{product.name}</h1>
+      {hasDiscount && <span class="product-badge">-{discountPct}%</span>}
+    </div>
+
+    <div class="product-price-block">
+      <span class="product-price" id="price-display-desktop">
+        {fmt(basePrice)} <span class="product-currency">{cur}</span>
+      </span>
+      {hasDiscount && (
+        <span class="product-crossed">
+          {fmt(comparePrice!)} <span class="product-currency">{cur}</span>
+        </span>
+      )}
+    </div>
+  </div>
+
+  {(isLowStock || product.freeShipping) && (
+    <div class="product-flags">
+      {isLowStock && (
+        <span class="product-flag product-flag-warn">
+          <Icon name="heroicons:exclamation-triangle" class="w-4 h-4 shrink-0" />
+          {lowStockText}
+        </span>
+      )}
+      {product.freeShipping && (
+        <span class="product-flag product-flag-ok">
+          <Icon name="heroicons:truck" class="w-4 h-4 shrink-0" />
+          {freeShippingBadge}
+        </span>
+      )}
+    </div>
+  )}
+</div>

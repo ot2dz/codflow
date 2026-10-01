@@ -77,7 +77,8 @@ E-commerce in Algeria is **95%+ Cash on Delivery (الدفع عند الاستل
 
 CodFlow v1.1.0 — here's what works today:
 
-### Storefront (`cod-astro/theme01`)
+### Storefront (`cod-astro/theme01` + `cod-astro/theme02`)
+- ✅ **Swappable themes** — `theme01` (rounded, niche-neutral default) and `theme02` (sharp red/gold COD identity modeled on a one-product landing page: gallery with arrows + thumbnails, bordered checkout card, gradient order-summary banner, mobile sticky CTA). Same platform engine, different look
 - ✅ **Landing pages (`/lp/[slug]`)** — one-product marketing pages: stacked image story + COD form, no nav chrome
 - ✅ Single-page COD checkout with live shipping calculation
 - ✅ Home delivery **or** carrier stop-desk pickup selection
@@ -334,7 +335,7 @@ cd cod-client-astro && npm run typecheck
 ```
 
 CI runs typecheck + tests for cod-server and cod-client-astro, plus
-astro check + tests for theme01.
+astro check + tests for theme01 and theme02.
 
 ---
 
@@ -362,13 +363,13 @@ astro check + tests for theme01.
 ### Planned
 
 - 📈 **Deeper dashboard analytics** — revenue, delivery-rate, and return-rate trends
-- 📦 **More Themes** — Additional storefront themes beyond `theme01`
 - 📘 **Theme Editing Guides** — Comprehensive guides for customizing and creating themes
 - ☁️ **CodFlow Cloud** — One-click deployment from dashboard for agencies to resell CodFlow
 - 📧 **Email order notifications & admin alerts** — extend the Sendili integration beyond transactional mail
 
 ### Recently Shipped
 
+- ✅ **theme02 storefront** — a second swappable theme (`cod-astro/theme02`): sharp red/gold identity with the product page modeled on a one-product COD landing page (gallery arrows + thumbnails, bordered checkout card, gradient summary banner, mobile sticky CTA). Full CodFlow checkout engine (variants, offers, OTP, Turnstile, commune API) preserved; the checkout UI is controlled from one file (`src/theme/config/form.ts`)
 - ✅ **Yalidine Hardening** — full 36-status webhook mapping (live-verified return flows), HMAC-SHA256 signature verification, per-carrier delivery-zone name sync, dispatch-time delivery-type switching, and a webhook events log for every webhook-capable carrier
 - ✅ **Landing Pages** — one-product marketing pages (image stack + COD order form) with the Studio builder, per-link stats, A/B comparison, order attribution, and 7 MCP tools
 - ✅ **Astro Dashboard** — the merchant dashboard now runs on Astro (was Next.js)

@@ -1,0 +1,141 @@
+---
+// ── theme02 product page layout ─────────────────────────────────────────────
+// Structure: gallery column + bordered details card (title/price + order form),
+// rich description below, reviews last. Matches the reference COD one-product
+// page while keeping CodFlow's order engine (variants, offers, OTP, commune).
+import OrderForm from "@/theme/components/order/OrderForm.astro";
+import ProductGallery from "@/theme/components/product/ProductGallery.astro";
+import ProductInfo from "@/theme/components/product/ProductInfo.astro";
+import ReviewsIsland from "@/theme/components/product/ReviewsIsland.astro";
+import ShippingIsland from "@/theme/components/product/ShippingIsland.astro";
+import { getProductJsonLd } from "@/theme/utils/seo";
+import { fetchProductByHandle } from "@/core/api/client";
+
+interface Props {
+  slug: string;
+  config: any;
+  content: any;
+  isRTL: boolean;
+  fieldErrors: any;
+  serverError: string | null;
+}
+
+const { slug, config, content, isRTL, fieldErrors, serverError } = Astro.props;
+
+const product = await fetchProductByHandle(slug);
+
+if (!product) return Astro.redirect("/");
+
+const cur = config.currencySymbol;
+const defaultVariant = product.hasVariants
+  ? (product.variants.find((v: typeof product.variants[0]) => v.isDefault) ?? product.variants[0])
+  : null;
+const basePrice    = defaultVariant?.price ?? product.price;
+const comparePrice = defaultVariant?.compareAtPrice ?? product.compareAtPrice;
+const hasDiscount  = comparePrice != null && comparePrice > basePrice;
+const discountPct  = hasDiscount ? Math.round((1 - basePrice / comparePrice!) * 100) : 0;
+
+const isOutOfStock = product.trackInventory && product.inventory === 0;
+const isLowStock   = product.trackInventory && product.inventory > 0 && product.inventory <= 5;
+const lowStockText = content.lowStock.replace("{n}", String(product.inventory));
+
+const defaultVariantId = defaultVariant?.id ?? null;
+const jsonLd = getProductJsonLd(product, basePrice);
+---
+
+<script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+
+<!-- Data bridge: server-computed values → client script -->
+<div
+  id="page-data"
+  class="sr-only"
+  data-variants={JSON.stringify(product.variants)}
+  data-base-price={basePrice}
+  data-compare-price={comparePrice ?? ""}
+  data-cur={cur}
+  data-is-rtl={isRTL ? "1" : "0"}
+  data-shipping-label={content.shippingLabel}
+  data-shipping-calc={content.shippingCalculated}
+  data-shipping-free={content.shippingFree}
+  data-total-label={content.totalLabel}
+  data-commune-placeholder={content.formCommunePlaceholder}
+  data-commune-loading={content.formCommuneLoading}
+  data-commune-disabled={content.formCommuneDisabled}
+  data-offers={JSON.stringify(product.offers)}
+  data-free-shipping={product.freeShipping ? "1" : "0"}
+  data-offer-free-label={content.offerFreeLabel}
+  data-offer-active={content.offerActive}
+  data-offer-unlocked={content.offerUnlocked}
+  data-offer-add-more={content.offerAddMore}
+  data-offer-add-one={content.offerAddOne}
+  data-offer-you-get={content.offerYouGet}
+  data-track-inventory={product.trackInventory ? "1" : "0"}
+  data-out-of-stock-label={content.outOfStock}
+  data-qty-max-stock={content.qtyMaxStock}
+  data-inventory={String(product.inventory)}
+  data-pixel-id={config.pixelId ?? ""}
+  data-phone-invalid={content.formPhoneInvalid}
+  data-product-id={product.id}
+  data-product-name={product.name}
+/>
+
+<ShippingIsland server:defer />
+
+<div class="product-layout">
+  <!-- Gallery (first in DOM → appears on the start side, right in RTL) -->
+  <div class="product-media">
+    <ProductGallery product={product} content={content} />
+  </div>
+
+  <!-- Details card: title + price + order form -->
+  <div class="product-details">
+    <ProductInfo
+      product={product}
+      basePrice={basePrice}
+      comparePrice={comparePrice}
+      discountPct={discountPct}
+      cur={cur}
+      isLowStock={isLowStock}
+      lowStockText={lowStockText}
+      freeShippingBadge={content.freeShippingBadge}
+    />
+
+    <OrderForm
+      product={product}
+      content={content}
+      fieldErrors={fieldErrors}
+      serverError={serverError}
+      basePrice={basePrice}
+      defaultVariant={defaultVariant ?? null}
+      cur={cur}
+      isRTL={isRTL}
+      offers={product.offers}
+      defaultVariantId={defaultVariantId}
+      isOutOfStock={isOutOfStock}
+      otpEnabled={config.otpEnabled === true}
+      turnstileEnabled={config.turnstileEnabled === true}
+      turnstileSiteKey={config.turnstileSiteKey ?? null}
+      showCommune={config.showCommune !== false}
+    />
+  </div>
+</div>
+
+{product.description && (
+  <section class="product-description">
+    <div class="product-description-inner">
+      <p class="product-description-text">{product.description}</p>
+    </div>
+  </section>
+)}
+
+{config.reviewsEnabled && (
+  <div class="reviews-wrap">
+    <ReviewsIsland productId={product.id} content={content} server:defer>
+      <div slot="fallback" class="reviews-skeleton">
+        <div class="reviews-skeleton-line"></div>
+        <div class="reviews-skeleton-card"></div>
+        <div class="reviews-skeleton-card"></div>
+      </div>
+    </ReviewsIsland>
+  </div>
+)}

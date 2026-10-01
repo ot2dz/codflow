@@ -1,0 +1,92 @@
+---
+import type { Product, Offer } from "@/core/api/types";
+import type { StoreFrontContent } from "@/theme/config/content";
+import { Icon } from "astro-icon/components";
+
+interface Props {
+  product: Product;
+  basePrice: number;
+  cur: string;
+  offers: Offer[];
+  content: StoreFrontContent;
+  open?: boolean;
+  showShippingRow?: boolean;
+}
+
+const { product, basePrice, cur, offers, content, open = true, showShippingRow = true } = Astro.props;
+const productImage = product.coverImage?.src ?? product.images?.[0]?.src ?? "";
+
+function fmt(n: number) {
+  return n.toLocaleString("ar-DZ");
+}
+---
+
+<div class="order-summary" id="order-summary">
+  <details open={open} class="theme02-summary">
+    <summary>
+      <span class="theme02-summary-title">{content.summaryTitle}</span>
+      <Icon name="heroicons:chevron-up" class="w-5 h-5 summary-chevron" aria-hidden="true" />
+    </summary>
+
+    <div class="theme02-summary-content">
+      <div class="theme02-summary-product">
+        <div class="theme02-summary-product-main">
+          {productImage && (
+            <img
+              id="summary-image"
+              class="theme02-summary-img"
+              src={productImage}
+              alt={product.name}
+              loading="lazy"
+            />
+          )}
+          <span class="theme02-summary-name">{product.name}</span>
+          <span class="theme02-summary-qty" id="summary-qty-label">x1</span>
+        </div>
+        <span class="theme02-summary-item-price" id="summary-item-price">
+          {fmt(basePrice)} {cur}
+        </span>
+      </div>
+
+      {showShippingRow && (
+        <div class="theme02-summary-shipping-row">
+          <span>{content.shippingLabel}</span>
+          <span id="summary-shipping" class="competitor-shipping-badge">
+            {content.shippingCalculated}
+          </span>
+        </div>
+      )}
+
+      {offers.map((offer) => {
+        const isFreeShipping = offer.discountType === "free_shipping";
+        const rewardLabel = offer.rewardProductName + (offer.rewardVariantLabel ? ` (${offer.rewardVariantLabel})` : "");
+        return (
+          <div id={`offer-row-${offer.id}`} class="theme02-offer-row hidden">
+            {isFreeShipping ? (
+              <>
+                <span>{content.shippingLabel}</span>
+                <span>{content.offerFreeShippingBadge}</span>
+              </>
+            ) : (
+              <>
+                <span>{rewardLabel} × {offer.rewardQuantity}</span>
+                <span>{content.offerFreeLabel}</span>
+              </>
+            )}
+          </div>
+        );
+      })}
+
+      <div class="theme02-summary-total">
+        <span>{content.totalLabel}</span>
+        <span id="summary-total">{fmt(basePrice)} {cur}</span>
+      </div>
+    </div>
+  </details>
+</div>
+
+<style>
+  details:not([open]) .summary-chevron {
+    transform: rotate(180deg);
+  }
+</style>

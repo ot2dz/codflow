@@ -1,0 +1,146 @@
+---
+import { actions } from "astro:actions";
+import type { Product, ProductVariant, Offer } from "@/core/api/types";
+import type { StoreFrontContent } from "@/theme/config/content";
+import { Icon } from "astro-icon/components";
+import { ORDER_FORM } from "@/theme/config/form";
+
+import VariantSelector from "./VariantSelector.astro";
+import OfferTiers from "./OfferTiers.astro";
+import CustomerFields from "./CustomerFields.astro";
+import OrderSummary from "./OrderSummary.astro";
+import OtpStep from "./OtpStep.astro";
+import TurnstileField from "./TurnstileField.astro";
+
+interface Props {
+  product: Product;
+  content: StoreFrontContent;
+  fieldErrors: Record<string, string[] | undefined>;
+  serverError: string | null;
+  basePrice: number;
+  defaultVariant: ProductVariant | null;
+  cur: string;
+  isRTL: boolean;
+  offers: Offer[];
+  defaultVariantId: string | null;
+  isOutOfStock?: boolean;
+  otpEnabled?: boolean;
+  turnstileEnabled?: boolean;
+  turnstileSiteKey?: string | null;
+  showCommune?: boolean;
+  landingPageSlug?: string | null;
+}
+
+const {
+  product,
+  content,
+  fieldErrors,
+  serverError,
+  basePrice,
+  defaultVariant,
+  cur,
+  isRTL,
+  offers,
+  defaultVariantId,
+  isOutOfStock = false,
+  otpEnabled = false,
+  turnstileEnabled = false,
+  turnstileSiteKey = null,
+  landingPageSlug = null,
+  showCommune = true,
+} = Astro.props;
+
+const comparePrice = defaultVariant?.compareAtPrice ?? product.compareAtPrice ?? null;
+---
+
+<div class="theme02-checkout" id="order-section">
+  {ORDER_FORM.showProductHeader && (
+    <div class="theme02-checkout-head">
+      <span class="theme02-checkout-name">{product.name}</span>
+      <span class="theme02-checkout-price">
+        {basePrice.toLocaleString("ar-DZ")} <span>{cur}</span>
+      </span>
+    </div>
+  )}
+
+  {serverError && (
+    <div class="theme02-error">
+      <Icon name="heroicons:exclamation-triangle" class="w-5 h-5 shrink-0" />
+      <p>{serverError}</p>
+    </div>
+  )}
+
+  <form method="POST" action={actions.placeOrder} class="theme02-form">
+    <input type="hidden" name="productId"          value={product.id} />
+    <input type="hidden" name="fbc" id="fbc-input" value="" />
+    <input type="hidden" name="fbp" id="fbp-input" value="" />
+    <input type="hidden" name="productName"        value={product.name} />
+    <input type="hidden" name="pricePerUnit"       value={basePrice} id="price-input" />
+    <input type="hidden" name="variantId"          value={defaultVariant?.id ?? ""} id="variant-id-input" />
+    <input type="hidden" name="variantLabel"       value="" id="variant-label-input" />
+    <input type="hidden" name="offerId"            value="" id="offer-id-input" />
+    <input type="hidden" name="variantSelections"  value="[]" id="variant-selections-input" />
+    <input type="hidden" name="otpToken" id="otp-token-input" value="" />
+    {landingPageSlug && <input type="hidden" name="landingPageSlug" value={landingPageSlug} />}
+
+    {offers.length === 0 && <VariantSelector product={product} />}
+
+    <OfferTiers
+      product={product}
+      offers={offers}
+      basePrice={basePrice}
+      comparePrice={comparePrice}
+      cur={cur}
+      isRTL={isRTL}
+      content={content}
+      defaultVariantId={defaultVariantId}
+    />
+
+    <CustomerFields
+      content={content}
+      fieldErrors={fieldErrors}
+      isRTL={isRTL}
+      showCommune={showCommune}
+      showAddress={ORDER_FORM.showAddress}
+    />
+
+    {otpEnabled && <OtpStep content={content} isRTL={isRTL} />}
+
+    {turnstileEnabled && turnstileSiteKey && (
+      <TurnstileField siteKey={turnstileSiteKey} content={content} />
+    )}
+
+    <button
+      type="submit"
+      class:list={["theme02-buy-btn", isOutOfStock && "is-disabled"]}
+      id="submit-btn"
+      disabled={isOutOfStock || undefined}
+    >
+      <span>{isOutOfStock ? content.outOfStock : content.orderCta}</span>
+    </button>
+
+    {ORDER_FORM.showSummary && (
+      <OrderSummary
+        product={product}
+        basePrice={basePrice}
+        cur={cur}
+        offers={offers}
+        content={content}
+        open={ORDER_FORM.summaryOpen}
+        showShippingRow={ORDER_FORM.showShippingRow}
+      />
+    )}
+
+    {ORDER_FORM.showConfirmNote && (
+      <p class="theme02-confirm-note">{content.formConfirmNote}</p>
+    )}
+  </form>
+
+  {ORDER_FORM.stickyMobileCta && !isOutOfStock && (
+    <div id="sticky-order-bar" class="theme02-sticky" aria-hidden="true">
+      <button type="button" id="sticky-scroll-btn">
+        {content.orderCta}
+      </button>
+    </div>
+  )}
+</div>

@@ -1,0 +1,127 @@
+---
+import { Image } from "astro:assets";
+import type { Product } from "@/core/api/types";
+import type { StoreFrontContent } from "@/theme/config/content";
+import { Icon } from "astro-icon/components";
+
+interface Props {
+  product: Product;
+  content: StoreFrontContent;
+}
+
+const { product, content } = Astro.props;
+const images = product.images ?? [];
+---
+
+<div class="product-gallery" data-gallery-root>
+  <div class="gallery-main">
+    <div class="gallery-track" id="gallery">
+      {images.length > 0 ? images.map((img, idx) => (
+        <div class="gallery-slide" data-image-id={img.id}>
+          {idx === 0 ? (
+            <Image
+              src={img.src}
+              alt={img.altText ?? product.name}
+              width={800}
+              height={800}
+              widths={[400, 720, 800]}
+              sizes="(min-width: 1024px) 50vw, 100vw"
+              priority={true}
+              format="webp"
+              quality={90}
+              class="w-full h-full object-cover"
+            />
+          ) : (
+            <Image
+              src={img.src}
+              alt={img.altText ?? product.name}
+              width={800}
+              height={800}
+              loading="lazy"
+              decoding="async"
+              format="webp"
+              quality={90}
+              class="w-full h-full object-cover"
+            />
+          )}
+        </div>
+      )) : (
+        <div class="gallery-slide gallery-slide-empty">
+          <Icon name="heroicons:photo" class="w-24 h-24 opacity-20" style="color: var(--clr-text-2)" />
+        </div>
+      )}
+    </div>
+
+    {images.length > 1 && (
+      <Fragment>
+        <button
+          type="button"
+          class="gallery-arrow gallery-arrow-prev"
+          data-gallery-prev
+          aria-label={content.ariaPreviousImage}
+        >
+          <Icon name="heroicons:chevron-down" class="gallery-arrow-icon" />
+        </button>
+        <button
+          type="button"
+          class="gallery-arrow gallery-arrow-next"
+          data-gallery-next
+          aria-label={content.ariaNextImage}
+        >
+          <Icon name="heroicons:chevron-down" class="gallery-arrow-icon" />
+        </button>
+      </Fragment>
+    )}
+  </div>
+
+  {images.length > 1 && (
+    <div class="gallery-thumbs">
+      {images.map((img, i) => (
+        <button
+          type="button"
+          class:list={["gallery-thumb", i === 0 && "is-active"]}
+          aria-label={content.ariaGoToImage.replace("{n}", String(i + 1)).replace("{total}", String(images.length))}
+          data-index={i}
+        >
+          <Image
+            src={img.src}
+            alt={img.altText ?? `${i + 1}`}
+            width={80}
+            height={80}
+            loading={i < 4 ? "eager" : "lazy"}
+            decoding="async"
+            format="webp"
+            quality={80}
+            class="w-full h-full object-cover"
+          />
+        </button>
+      ))}
+    </div>
+  )}
+</div>
+
+<script>
+  const initGallery = () => {
+    document.querySelectorAll<HTMLElement>("[data-gallery-root]").forEach((root) => {
+      const track = root.querySelector<HTMLElement>("#gallery");
+      if (!track) return;
+      const slides = Array.from(track.children) as HTMLElement[];
+      if (slides.length < 2) return;
+
+      const current = () => Math.round(Math.abs(track.scrollLeft) / track.offsetWidth);
+      const go = (i: number) => {
+        const n = Math.max(0, Math.min(slides.length - 1, i));
+        slides[n]?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "start" });
+      };
+
+      root.querySelector<HTMLElement>("[data-gallery-prev]")?.addEventListener("click", () => go(current() - 1));
+      root.querySelector<HTMLElement>("[data-gallery-next]")?.addEventListener("click", () => go(current() + 1));
+    });
+  };
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initGallery);
+  } else {
+    initGallery();
+  }
+</script>

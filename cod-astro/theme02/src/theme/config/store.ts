@@ -1,0 +1,56 @@
+// ╔══════════════════════════════════════════════════════════════════════╗
+// ║  CUSTOMIZE HERE (Custom mode) — DEFAULT_CONFIG only                  ║
+// ║  Edit DEFAULT_CONFIG to change fallback colors/font/meta when the    ║
+// ║  API is unreachable. All other code in this file is core engine.     ║
+// ╚══════════════════════════════════════════════════════════════════════╝
+/**
+ * Per-request store data helpers.
+ * Call once per page — pass the returned config to StoreLayout to avoid
+ * duplicate API fetches.
+ */
+import { fetchStoreConfig } from "@/core/api/client";
+import { resolveContent } from "@/theme/content";
+import type { StoreConfig } from "@/core/api/types";
+import type { StoreFrontContent } from "@/theme/content";
+
+export const DEFAULT_CONFIG: StoreConfig = {
+  id: "",
+  name: "متجري",
+  domain: null,
+  logoUrl: null,
+  themeId: "theme02",
+  primaryColor: "#a5010a",
+  accentColor: "#d6c196",
+  bgColor: "#f8fafc",
+  fontFamily: "Readex Pro, sans-serif",
+  fontUrl: null,
+  lang: "ar",
+  currency: "DZD",
+  currencySymbol: "دج",
+  contentJson: null,
+  metaTitle: null,
+  metaDescription: null,
+  ogImage: null,
+  announcementBar: null,
+  reviewsEnabled: true,
+  showCommune: true,
+  otpEnabled: false,
+  turnstileEnabled: false,
+  turnstileSiteKey: null,
+  status: "active",
+  pixelId: null,
+  conversionEvent: null,
+};
+
+export interface StoreContext {
+  config: StoreConfig;
+  content: StoreFrontContent;
+  isRTL: boolean;
+}
+
+export async function getStoreContext(): Promise<StoreContext> {
+  const config = (await fetchStoreConfig()) ?? DEFAULT_CONFIG;
+  const content = resolveContent(config.lang, config.contentJson);
+  const isRTL = config.lang === "ar";
+  return { config, content, isRTL };
+}

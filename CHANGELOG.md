@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- storefront: **theme02** (`cod-astro/theme02`) — a second swappable theme with
+  a sharp red/gold COD identity modeled on a one-product landing page: the
+  product page (`/products/[slug]`) renders a gallery column (prev/next arrows
+  + thumbnail strip) beside a 3px-bordered details card holding title,
+  discount pill, price, the order form, and a collapsible summary with a
+  primary→accent gradient total banner; rich description below; fixed mobile
+  CTA bar. Body font `Readex Pro`, headings `IBM Plex Sans Arabic`
+  (`--font-head`), crisp `0.625rem` corners, calm easing. The CodFlow order
+  engine is untouched (variants, offers, OTP, Turnstile, commune API); the
+  checkout UI is tuned from a single file, `src/theme/config/form.ts`.
+  Registered as an npm workspace, covered by CI
+  (`astro check` + tests + validators + build), and deployable as its own
+  Worker (`codflow-theme02`); `stores.theme_id` carries the active theme slug
 - shipping: **Free Shipping Product** flag on products (`products.free_shipping`,
   migration 0027) — when EVERY product in an order is tagged, the resolved
   delivery fee is forced to 0; a single untagged line keeps the fee. Distinct

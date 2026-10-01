@@ -18,6 +18,10 @@ TypeScript, deployed on Cloudflare (Workers, D1, R2, KV).
 - `cod-astro/theme01/` — storefront theme (Astro). It is a swappable theme
   layer, not a platform package; keep engine logic out. Its commands and
   boundaries differ — read `cod-astro/theme01/AGENTS.md` before editing it.
+- `cod-astro/theme02/` — second storefront theme (Astro): the sharp red/gold
+  "one-product COD landing" identity (product page focus). Same swappable-layer
+  rules as theme01; checkout-UI toggles live in its
+  `src/theme/config/form.ts`. Read `cod-astro/theme02/AGENTS.md` before editing.
 
 There is **one root `package.json` with npm workspaces** and ONE root
 `package-lock.json`. Never add per-package lockfiles. The root also carries the
@@ -40,8 +44,8 @@ Same for `cod-client-astro` (`npm run typecheck`, `npm test`, `npm run dev`
 — astro dev on :4321). Admin bootstrap: `cd cod-client-astro &&
 npm run seed:admin` (sign-up is disabled by design).
 
-`cod-astro/theme01` has extra validators — see
-`cod-astro/theme01/AGENTS.md` for its commands.
+`cod-astro/theme01` and `cod-astro/theme02` have extra validators — see
+their `AGENTS.md` files for commands.
 
 ## Cloud resource configuration
 
@@ -62,7 +66,7 @@ other is how these drift.
 - After changing TypeScript: run `npm run typecheck` in the affected package.
 - After changing behavior: run `npm test` in the affected package.
 - Full CI runs typecheck + tests for cod-server and cod-client-astro, plus
-  `astro check` + tests for theme01 (`.github/workflows/ci.yml`).
+  `astro check` + tests for theme01 and theme02 (`.github/workflows/ci.yml`).
 
 ## Conventions
 
@@ -83,8 +87,8 @@ other is how these drift.
   cod-server or cod-client-astro.
 - Migrations: add a new migration; never rewrite an already-applied one.
 - Ask before adding a production dependency or changing the D1 schema.
-- Keep engine logic out of `cod-astro/theme01`; the theme layer is meant to be
-  swappable (see `cod-astro/theme01/AGENTS.md`).
+- Keep engine logic out of `cod-astro/theme01` and `cod-astro/theme02`; the
+  theme layer is meant to be swappable (see each theme's `AGENTS.md`).
 - Dashboard data access goes through the API seam (`cod-client-astro/src/lib/api.ts`).
   Components never call `fetch` directly, and the dashboard does not query D1
   for business data — authorization lives in cod-server.
