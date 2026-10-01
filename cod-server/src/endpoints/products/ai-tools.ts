@@ -75,6 +75,7 @@ export const PRODUCT_TOOL_OUTPUT_SCHEMAS: Record<string, z.ZodType> = {
         avgRating: z.number().nullable().describe("Average of approved reviews, or null"),
         showInStore: z.boolean().describe("Storefront-only visibility switch"),
         storeFeatured: z.boolean(),
+        freeShipping: z.boolean().describe("Free Shipping Product: when every product in an order is tagged, the delivery fee is 0"),
       }),
     ).describe("Products matching the filters"),
   }),
@@ -160,6 +161,7 @@ export const getProductTools = (db: ReturnType<typeof getDb>) => ({
             avgRating: p.avgRating,
             showInStore: p.showInStore,
             storeFeatured: p.storeFeatured,
+            freeShipping: p.freeShipping,
           })),
         };
       } catch (error: any) {
@@ -217,7 +219,7 @@ export const getProductTools = (db: ReturnType<typeof getDb>) => ({
       "Optional: description, handle (auto-generated from name if omitted), compareAtPrice, costPrice, type (PHYSICAL|DIGITAL), " +
       "variantOptions (array of {name, values}), inventory (default 0), lowStockThreshold (default 5), trackInventory (default true), " +
       "categoryId, tags (string array), visibility (default true), status (DRAFT|ACTIVE|ARCHIVED, default ACTIVE), " +
-      "showInStore (default true), storeFeatured (default false), shippingProfileId.",
+      "showInStore (default true), storeFeatured (default false), freeShipping (default false — tags the product for the all-products-free delivery rule), shippingProfileId.",
     inputSchema: z.object({}).passthrough(), // Layer 1: Permissive input
     execute: async (args) => {
       // Layer 2: Strict validation
@@ -237,7 +239,7 @@ export const getProductTools = (db: ReturnType<typeof getDb>) => ({
             `hasVariants (boolean), variantOptions (array), inventory (int ≥ 0), ` +
             `lowStockThreshold (int ≥ 0), trackInventory (boolean), categoryId, tags (string[]), ` +
             `visibility (boolean), status (DRAFT|ACTIVE|ARCHIVED), showInStore (boolean), ` +
-            `storeFeatured (boolean), shippingProfileId.`,
+            `storeFeatured (boolean), freeShipping (boolean), shippingProfileId.`,
         };
       }
 
@@ -315,7 +317,7 @@ export const getProductTools = (db: ReturnType<typeof getDb>) => ({
             `type (PHYSICAL|DIGITAL), hasVariants, variantOptions (array or null), ` +
             `sku (non-empty string), inventory (int ≥ 0), lowStockThreshold, trackInventory, ` +
             `categoryId (string or null), tags (string[]), visibility, ` +
-            `status (DRAFT|ACTIVE|ARCHIVED), showInStore, storeFeatured, shippingProfileId.`,
+            `status (DRAFT|ACTIVE|ARCHIVED), showInStore, storeFeatured, freeShipping, shippingProfileId.`,
         };
       }
 

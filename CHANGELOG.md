@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- shipping: **Free Shipping Product** flag on products (`products.free_shipping`,
+  migration 0027) — when EVERY product in an order is tagged, the resolved
+  delivery fee is forced to 0; a single untagged line keeps the fee. Distinct
+  from the cart-based `free_shipping` Offer (trigger product + minimum
+  quantity), which is unchanged. Toggle in the product form, "Free shipping"
+  badge on the storefront product page, and the storefront order summary
+  shows a free delivery fee for tagged products.
+
 - storefront (`theme01`): optional standalone **Node** build for Docker hosts —
   `DEPLOY_TARGET=node npm run build` selects the `@astrojs/node` adapter and
   `cod-astro/theme01/Dockerfile` runs the storefront as a Node server

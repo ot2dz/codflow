@@ -61,8 +61,12 @@ The rejection when the chosen delivery mode has no rule or is disabled at the or
 _Avoid_: Out of range, unsupported region
 
 **Free Shipping Offer**:
-A promotion that zeroes the resolved fee when its trigger product reaches its trigger quantity in the order. The only cart-based way delivery becomes free.
+A promotion that zeroes the resolved fee when its trigger product reaches its trigger quantity in the order. A cart-based way delivery becomes free.
 _Avoid_: Shipping discount, free threshold
+
+**Free Shipping Product**:
+A product-level flag. When EVERY product in an order carries it, the resolved fee is zeroed. No trigger product, no minimum quantity — it is an always-free delivery promise for that catalog entry. Distinct from the Free Shipping Offer.
+_Avoid_: Free delivery product, free-ship flag
 
 ## Boundaries
 

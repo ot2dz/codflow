@@ -144,6 +144,8 @@
     "track_stock_hint": "Surveiller automatiquement les niveaux d'inventaire",
     "show_in_store_label": "Afficher dans la boutique",
     "show_in_store_hint": "Les produits masqués n'apparaissent ni dans le catalogue ni sur leur page — leurs pages de destination continuent de vendre normalement.",
+    "free_shipping_label": "Livraison gratuite",
+    "free_shipping_hint": "Si activé : lorsque tous les produits de la commande sont en livraison gratuite, les frais de livraison passent à 0.",
     "bulk_fill": "Remplissage groupé",
     "bulk_price_placeholder": "Prix",
     "bulk_price_apply": "Appliquer le prix",

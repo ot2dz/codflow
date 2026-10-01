@@ -1375,6 +1375,7 @@ describe("Orders — targeted business-logic tests", () => {
       // even for offers that would be expired by date.
       vi.mocked(resolveFee.resolveDeliveryFee).mockResolvedValue({ deliveryFee: 600 } as any);
       vi.mocked(resolveFee.applyFreeShippingOffer).mockResolvedValue(0); // offer applied
+      vi.mocked(resolveFee.applyFreeShippingProducts).mockResolvedValue(0); // product-flag leaves it free
       vi.mocked(queries.createOrder).mockResolvedValue(undefined as any);
       mockDb = {
         select: vi.fn(() => ({

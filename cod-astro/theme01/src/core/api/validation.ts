@@ -65,6 +65,7 @@ export const ProductSchema = z.object({
   tags: z.array(z.string()),
   status: z.string(),
   storeFeatured: z.boolean(),
+  freeShipping: z.boolean().optional(),
   inventory: z.number(),
   trackInventory: z.boolean(),
   category: z.object({

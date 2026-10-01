@@ -9,7 +9,7 @@
  *   5. Free-shipping offer override → fee = 0
  */
 
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 import type * as schema from "@/db/schema";
 import {
@@ -224,4 +224,34 @@ export async function applyFreeShippingOffer(
   }
 
   return fee;
+}
+
+/**
+ * Apply the Free Shipping Product flag after fee + offer resolution.
+ * Returns 0 only when EVERY product in the order is tagged `free_shipping`;
+ * a single untagged product keeps the resolved fee. Returns the original fee
+ * for an empty product list.
+ */
+export async function applyFreeShippingProducts(
+  db: DB,
+  fee: number,
+  productIds: string[],
+): Promise<number> {
+  if (fee === 0 || productIds.length === 0) return fee;
+
+  const uniqueIds = Array.from(new Set(productIds));
+
+  const rows = await db
+    .select({ id: products.id, freeShipping: products.freeShipping })
+    .from(products)
+    .where(inArray(products.id, uniqueIds));
+
+  // Any known product without the flag keeps the fee. Unknown product ids
+  // (should not happen for a validated order) also keep the fee — free
+  // shipping is never granted on an unverified line.
+  const allFree =
+    rows.length === uniqueIds.length &&
+    rows.every((row) => row.freeShipping === true);
+
+  return allFree ? 0 : fee;
 }

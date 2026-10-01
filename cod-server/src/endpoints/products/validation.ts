@@ -30,6 +30,7 @@ export const createProductSchema = z.object({
   showInStore: z.boolean().default(true),
   storeFeatured: z.boolean().default(false),
   shippingProfileId: z.string().optional().nullable(),
+  freeShipping: z.boolean().default(false),
 }).superRefine((data, ctx) => {
   if (!data.hasVariants && !data.sku) {
     ctx.addIssue({
@@ -61,6 +62,7 @@ export const updateProductSchema = z.object({
   showInStore: z.boolean().optional(),
   storeFeatured: z.boolean().optional(),
   shippingProfileId: z.string().optional().nullable(),
+  freeShipping: z.boolean().optional(),
 });
 
 export const updateStatusSchema = z.object({

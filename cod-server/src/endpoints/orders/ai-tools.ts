@@ -321,7 +321,7 @@ export const getOrderTools = (db: ReturnType<typeof getDb>) => ({
         }
 
         // Resolve delivery fee from shipping profile
-        const { resolveDeliveryFee, applyFreeShippingOffer } = await import("./resolve-fee");
+        const { resolveDeliveryFee, applyFreeShippingOffer, applyFreeShippingProducts } = await import("./resolve-fee");
         let deliveryFee = parsed.data.deliveryFee ?? 0;
         if (parsed.data.wilayaId) {
           try {
@@ -337,6 +337,7 @@ export const getOrderTools = (db: ReturnType<typeof getDb>) => ({
             }
             const productQuantities = new Map(parsed.data.products.map((p) => [p.productId, p.quantity]));
             deliveryFee = await applyFreeShippingOffer(db, deliveryFee, productIds, productQuantities);
+            deliveryFee = await applyFreeShippingProducts(db, deliveryFee, productIds);
           } catch (err) {
             if (parsed.data.orderType === "online") throw err;
             deliveryFee = parsed.data.deliveryFee ?? 0;

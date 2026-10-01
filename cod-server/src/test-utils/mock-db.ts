@@ -254,6 +254,7 @@ export function productRow(overrides: Record<string, unknown> = {}): Record<stri
     deleted_at: null,
     published_at: NOW,
     shipping_profile_id: null,
+    free_shipping: 0,
     created_at: NOW,
     updated_at: NOW,
     ...overrides,

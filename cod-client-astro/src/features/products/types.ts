@@ -73,6 +73,7 @@ export interface Product {
   status: ProductStatus;
   showInStore: boolean;
   storeFeatured: boolean;
+  freeShipping?: boolean;
   deletedAt?: string | null;
   publishedAt?: string | null;
   category?: ProductCategory | null;

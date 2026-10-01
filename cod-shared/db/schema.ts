@@ -672,6 +672,12 @@ export const products = sqliteTable("products", {
    */
   shippingProfileId: text("shipping_profile_id")
     .references(() => shippingProfiles.id, { onDelete: "set null" }),
+  /**
+   * Free Shipping Product flag. When EVERY product in an order carries this
+   * flag, the resolved delivery fee is forced to 0. Distinct from the
+   * cart-based free_shipping Offer (offers.discount_type).
+   */
+  freeShipping: integer("free_shipping", { mode: "boolean" }).notNull().default(false),
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
 });

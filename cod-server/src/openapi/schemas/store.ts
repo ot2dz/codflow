@@ -136,6 +136,10 @@ const storeBaseFields = {
   status: z.enum(["DRAFT", "ACTIVE", "ARCHIVED"]),
   showInStore: z.boolean(),
   storeFeatured: z.boolean(),
+  freeShipping: z.boolean().openapi({
+    description:
+      "Free Shipping Product flag — when every product in the order carries it, the delivery fee is 0.",
+  }),
   deletedAt: z.string().datetime().nullable(),
   publishedAt: z.string().datetime().nullable(),
   createdAt: z.string().datetime(),

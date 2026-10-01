@@ -12,7 +12,7 @@ import { wilayas, communes, customers, products, productVariants } from "@/db/sc
 import { eq } from "drizzle-orm";
 import * as queries from "./queries";
 import * as validation from "./validation";
-import { resolveDeliveryFee, applyFreeShippingOffer } from "./resolve-fee";
+import { resolveDeliveryFee, applyFreeShippingOffer, applyFreeShippingProducts } from "./resolve-fee";
 import { logActivity, ACTIONS } from "@/lib/activity";
 import { getDeliveryCompanyById } from "@/endpoints/delivery-companies/queries";
 import { NotFoundError, ValidationError, BusinessLogicError } from "@/lib/errors/classes";
@@ -174,6 +174,7 @@ export async function updateOrder(c: Context<AppContext>) {
       productIds,
     });
     deliveryFee = await applyFreeShippingOffer(db, resolved.deliveryFee, productIds, quantities);
+    deliveryFee = await applyFreeShippingProducts(db, deliveryFee, productIds);
   }
 
   const patch: {
@@ -574,6 +575,7 @@ export async function createOrder(c: Context<AppContext>) {
         // Apply free-shipping offer override
         const productQuantities = new Map(validated.products.map((p) => [p.productId, p.quantity]));
         deliveryFee = await applyFreeShippingOffer(db, deliveryFee, productIds, productQuantities);
+        deliveryFee = await applyFreeShippingProducts(db, deliveryFee, productIds);
       } catch (err) {
         // If the order is offline (dashboard), allow fee=0 and skip coverage check errors.
         // Online orders: re-throw to block order creation for uncovered zones.

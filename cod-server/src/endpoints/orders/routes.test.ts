@@ -232,6 +232,7 @@ describe("Orders routes (OpenAPIHono)", () => {
       vi.mocked(queries.createOrder).mockResolvedValue(undefined as any);
       vi.mocked(resolveFee.resolveDeliveryFee).mockResolvedValue({ deliveryFee: 600 } as any);
       vi.mocked(resolveFee.applyFreeShippingOffer).mockResolvedValue(600);
+      vi.mocked(resolveFee.applyFreeShippingProducts).mockResolvedValue(600);
       mockDb = dbSelectReturning({ id: "cust_1" }); // existing customer
 
       const res = await app.request("/api/orders", {
@@ -680,6 +681,7 @@ describe("Orders routes (OpenAPIHono)", () => {
         profileId: "profile_1",
       } as any);
       vi.mocked(resolveFee.applyFreeShippingOffer).mockResolvedValue(700);
+      vi.mocked(resolveFee.applyFreeShippingProducts).mockResolvedValue(700);
 
       const res = await app.request("/api/orders/ord_1", {
         method: "PATCH",

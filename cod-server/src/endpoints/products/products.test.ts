@@ -80,6 +80,14 @@ describe("createProductSchema", () => {
     expect(createProductSchema.parse(validBase).storeFeatured).toBe(false);
   });
 
+  it("defaults freeShipping to false", () => {
+    expect(createProductSchema.parse(validBase).freeShipping).toBe(false);
+  });
+
+  it("accepts freeShipping true on create", () => {
+    expect(createProductSchema.parse({ ...validBase, freeShipping: true }).freeShipping).toBe(true);
+  });
+
   it("accepts DIGITAL type", () => {
     expect(createProductSchema.safeParse({ ...validBase, type: "DIGITAL" }).success).toBe(true);
   });
@@ -288,6 +296,7 @@ describe("createProduct", () => {
       status: "ACTIVE",
       showInStore: true,
       storeFeatured: false,
+      freeShipping: false,
     });
 
     expect(result).not.toBeNull();
@@ -312,6 +321,7 @@ describe("createProduct", () => {
       status: "ACTIVE",
       showInStore: true,
       storeFeatured: false,
+      freeShipping: false,
     });
 
     expect(result!.publishedAt).toBeTruthy();
@@ -335,6 +345,7 @@ describe("createProduct", () => {
       status: "DRAFT",
       showInStore: false,
       storeFeatured: false,
+      freeShipping: false,
     });
 
     expect(result!.publishedAt).toBeNull();

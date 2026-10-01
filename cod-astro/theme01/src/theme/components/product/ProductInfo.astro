@@ -9,10 +9,11 @@ interface Props {
   cur: string;
   isLowStock: boolean;
   lowStockText: string;
+  freeShippingBadge: string;
   isDesktop?: boolean;
 }
 
-const { product, basePrice, comparePrice, cur, isLowStock, lowStockText, isDesktop = false } = Astro.props;
+const { product, basePrice, comparePrice, cur, isLowStock, lowStockText, freeShippingBadge, isDesktop = false } = Astro.props;
 const hasDiscount = comparePrice != null && comparePrice > basePrice;
 
 function fmt(n: number) {
@@ -46,6 +47,13 @@ function fmt(n: number) {
     <div class="mt-4 inline-flex items-center gap-2 bg-orange-50 text-orange-600 px-3 py-1.5 rounded-xl text-[0.8125rem] font-bold border border-orange-100">
       <Icon name="heroicons:exclamation-triangle" class="w-4 h-4 shrink-0" />
       {lowStockText}
+    </div>
+  )}
+
+  {product.freeShipping && (
+    <div class="mt-4 inline-flex items-center gap-2 bg-green-50 text-green-600 px-3 py-1.5 rounded-xl text-[0.8125rem] font-bold border border-green-100">
+      <Icon name="heroicons:truck" class="w-4 h-4 shrink-0" />
+      {freeShippingBadge}
     </div>
   )}
 </div>

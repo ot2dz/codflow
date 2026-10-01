@@ -40,6 +40,7 @@ export interface CreateProductData {
   showInStore: boolean;
   storeFeatured: boolean;
   shippingProfileId?: string | null;
+  freeShipping: boolean;
 }
 
 export interface UpdateProductData {
@@ -63,6 +64,7 @@ export interface UpdateProductData {
   showInStore?: boolean;
   storeFeatured?: boolean;
   shippingProfileId?: string | null;
+  freeShipping?: boolean;
 }
 
 function toHandle(name: string, id: string) {
@@ -222,6 +224,7 @@ export async function createProduct(db: AppDb, data: CreateProductData) {
     showInStore: data.showInStore,
     storeFeatured: data.storeFeatured,
     shippingProfileId: data.shippingProfileId ?? null,
+    freeShipping: data.freeShipping,
     deletedAt: null,
     publishedAt: data.status === "ACTIVE" ? now : null,
     createdAt: now,
@@ -257,6 +260,7 @@ export async function updateProduct(db: AppDb, productId: string, data: UpdatePr
   if (data.showInStore !== undefined) updates.showInStore = data.showInStore;
   if (data.storeFeatured !== undefined) updates.storeFeatured = data.storeFeatured;
   if (data.shippingProfileId !== undefined) updates.shippingProfileId = data.shippingProfileId ?? null;
+  if (data.freeShipping !== undefined) updates.freeShipping = data.freeShipping;
 
   const statements: BatchStatement[] = [
     db.update(products).set(updates).where(eq(products.id, productId)),

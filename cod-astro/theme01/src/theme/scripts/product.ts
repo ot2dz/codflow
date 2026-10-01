@@ -77,6 +77,9 @@ export function initProductPage() {
   };
   const allOffers: OfferData[] = JSON.parse(el.dataset.offers || "[]");
 
+  /** Free Shipping Product: this product's delivery is always free. */
+  const productFreeShipping = el.dataset.freeShipping === "1";
+
   // ── STATE ──────────────────────────────────────────────────────────────────
   /** Tracks selected values for each variant option (e.g., { "Color": "Red" }) */
   const selectedOpts: Record<string, string> = {};
@@ -171,7 +174,7 @@ export function initProductPage() {
 
     // 5. Handle special offer types (e.g. Free Shipping)
     const selOffer = allOffers.find(o => o.id === offId);
-    if (selOffer?.discountType === "free_shipping") {
+    if (selOffer?.discountType === "free_shipping" || productFreeShipping) {
       currentShipping = 0;
       updateVariantSelectionsInput();
       updatePriceUI();
@@ -549,6 +552,13 @@ export function initProductPage() {
    * Recalculates shipping cost based on selected wilaya and delivery type.
    */
   function refreshShipping() {
+    // 0. Free Shipping Product — delivery always 0, regardless of wilaya/offer.
+    if (productFreeShipping) {
+      currentShipping = 0;
+      updatePriceUI();
+      return;
+    }
+
     // 1. Check for free shipping offers
     const selOffer = allOffers.find(o => o.id === currentOfferId);
     if (selOffer?.discountType === "free_shipping") {

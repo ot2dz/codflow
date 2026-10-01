@@ -183,6 +183,11 @@ export const ProductSchema = z
     status: z.enum(["DRAFT", "ACTIVE", "ARCHIVED"]).openapi({ example: "ACTIVE" }),
     showInStore: z.boolean().openapi({ example: true }),
     storeFeatured: z.boolean().openapi({ example: false }),
+    freeShipping: z.boolean().openapi({
+      description:
+        "Free Shipping Product flag. When EVERY product in an order carries it, the order's delivery fee is forced to 0. Distinct from the cart-based free_shipping Offer.",
+      example: false,
+    }),
     deletedAt: z.string().datetime().nullable().openapi({
       description: "Soft-delete timestamp; products with a value are excluded from all responses",
       example: null,

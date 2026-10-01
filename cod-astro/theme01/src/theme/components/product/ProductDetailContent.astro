@@ -62,6 +62,7 @@ const jsonLd = getProductJsonLd(product, basePrice);
   data-commune-loading={content.formCommuneLoading}
   data-commune-disabled={content.formCommuneDisabled}
   data-offers={JSON.stringify(product.offers)}
+  data-free-shipping={product.freeShipping ? "1" : "0"}
   data-offer-free-label={content.offerFreeLabel}
   data-offer-active={content.offerActive}
   data-offer-unlocked={content.offerUnlocked}
@@ -100,6 +101,7 @@ const jsonLd = getProductJsonLd(product, basePrice);
         cur={cur}
         isLowStock={isLowStock}
         lowStockText={lowStockText}
+        freeShippingBadge={content.freeShippingBadge}
         isDesktop={true}
       />
     </div>
@@ -115,6 +117,7 @@ const jsonLd = getProductJsonLd(product, basePrice);
         cur={cur}
         isLowStock={isLowStock}
         lowStockText={lowStockText}
+        freeShippingBadge={content.freeShippingBadge}
       />
 
       <OrderForm
