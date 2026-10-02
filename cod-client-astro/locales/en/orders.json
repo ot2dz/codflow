@@ -344,5 +344,6 @@
       "description": "Shoppers who start an order but don't finish it will appear here as recovery leads."
     },
     "recovered_order": "Order {number}"
-  }
+  },
+  "live_status_updates": "{n} orders updated"
 }

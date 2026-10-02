@@ -344,5 +344,6 @@
       "description": "Les clients qui commencent une commande sans la terminer apparaîtront ici comme des leads à récupérer."
     },
     "recovered_order": "Commande {number}"
-  }
+  },
+  "live_status_updates": "{n} commandes mises à jour"
 }

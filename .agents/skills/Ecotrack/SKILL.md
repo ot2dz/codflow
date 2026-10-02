@@ -127,9 +127,16 @@ POST /api/v1/create/order   (query params, Bearer auth)
 9. **Labels are raw PDF bytes behind Bearer auth** — the URL is never public.
    Always serve through `proxyShipmentLabel` (server-side fetch), never expose
    the token to the browser.
-10. **No webhooks.** Tracking is pull-only: `get/tracking/info` (single) and
-    `get/trackings/info` (bulk, ≤100). The `/orders/:id/tracking` endpoint is
-    the only freshness source for EcoTrack orders.
+10. **Webhooks are supported since platform v1.0 (2026-05)**: 22
+    `order.state.*` events + `order.maj.added`, HMAC-SHA256 via
+    `X-ECOTRACK-Signature: sha256=<hex>` over the raw body, ULID idempotency
+    via `X-ECOTRACK-Event-Id`. Registered MANUALLY per tenant in the shipper
+    (expéditeur) dashboard → Webhooks; the secret is saved per company in the
+    CodFlow dashboard. Inbound receiver: `POST /webhooks/ecotrack`
+    (`handlers.ts → handleEcotrackWebhook`; sender identified by which
+    `*_ecotrack` company's secret validates). Pull tracking
+    (`get/tracking/info`) stays available and is still the freshness source
+    for tenants that never registered a webhook.
 11. **Status wording drifts per tenant.** Never treat French display labels as
     stable identifiers. The stable vocabulary is the `activity` enum keys and
     the status enum keys (both listed in API-REFERENCE.md). An unknown label

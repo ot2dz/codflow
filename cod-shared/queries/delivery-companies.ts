@@ -107,6 +107,26 @@ export async function getDeliveryCompanyByCode(db: AppDb, code: string) {
 }
 
 /**
+ * Internal: RAW rows of every EcoTrack-family company (code `ecotrack` or
+ * `*_ecotrack`), used by the inbound webhook receiver to resolve which
+ * tenant's webhook secret signs a delivery. Never returned to clients.
+ */
+export async function listEcotrackCompaniesRaw(db: AppDb) {
+  const rows = await db
+    .select({
+      id: deliveryCompanies.id,
+      code: deliveryCompanies.code,
+      name: deliveryCompanies.name,
+      webhookSecret: deliveryCompanies.webhookSecret,
+    })
+    .from(deliveryCompanies)
+    .all();
+  return rows.filter(
+    (r) => r.code === "ecotrack" || r.code.endsWith("_ecotrack"),
+  );
+}
+
+/**
  * Internal: get raw company record including credentials. Used by providers/handlers
  * that need to make outbound API calls. Never returned to clients.
  */

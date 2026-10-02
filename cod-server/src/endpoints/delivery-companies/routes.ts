@@ -483,8 +483,8 @@ const saveYalidineSecretRoute = defineRoute({
   path: "/{id}/webhook/secret",
   auth: "api-key",
   tags: ["Delivery Companies"],
-  summary: "Save Yalidine webhook secret",
-  description: "Stores the Yalidine webhook secret key (entered manually after setting up webhook in Yalidine dashboard).",
+  summary: "Save Yalidine/EcoTrack webhook secret",
+  description: "Stores the webhook secret key entered manually after setting up the webhook in the Yalidine or EcoTrack (shipper) dashboard. Supported for code `yalidine` and the `*_ecotrack` family.",
   params: idParams,
   body: saveSecretBodySchema,
   responses: {
@@ -493,7 +493,7 @@ const saveYalidineSecretRoute = defineRoute({
       content: jsonContent(z.object({ success: z.boolean() })),
     },
   },
-  handler: webhookHandlers.saveYalidineSecret,
+  handler: webhookHandlers.saveCarrierWebhookSecret,
 });
 
 const saveZrMappingRoute = defineRoute({

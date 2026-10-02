@@ -1,8 +1,9 @@
-import { Fragment, useDeferredValue, useEffect, useState } from "react";
+import { Fragment, useDeferredValue, useEffect, useRef, useState } from "react";
 import { AlertCircle, Calendar, Filter, PackageOpen, X } from "lucide-react";
 import { canScope, useIdentity } from "@/features/auth/components/RequireAuth";
 import { useT } from "@/i18n/react";
 import { ApiError } from "@/lib/api";
+import { notify } from "@/lib/notify";
 import {
   listAllOrders,
   listDeliveryCompanies,
@@ -167,6 +168,48 @@ export function OrdersList() {
   useEffect(() => {
     setPage(1);
   }, [deferredFilters, sortKey, sortDirection, pageSize, group, showDuplicates]);
+
+  // ── Live statuses ───────────────────────────────────────────────────────
+  // Carrier webhooks (EcoTrack/Yalidine/ZR) advance orders server-side at
+  // any moment; while this page is open and visible, poll quietly every 25s
+  // and surface what moved. Errors stay silent — the next tick retries and a
+  // real first-load failure still renders the loadError alert above.
+  const ordersRef = useRef(orders);
+  useEffect(() => {
+    ordersRef.current = orders;
+  }, [orders]);
+
+  useEffect(() => {
+    if (!canScope(identity, "orders:read")) return;
+    const timer = setInterval(() => {
+      if (document.hidden) return;
+      void (async () => {
+        try {
+          const latest = await listAllOrders();
+          const previous = new Map((ordersRef.current ?? []).map((o) => [o.id, o]));
+          let changed = 0;
+          for (const order of latest) {
+            const before = previous.get(order.id);
+            if (
+              !before ||
+              before.status !== order.status ||
+              (before.deliveryAttempts ?? 0) !== (order.deliveryAttempts ?? 0)
+            ) {
+              changed++;
+            }
+          }
+          setOrders(latest);
+          if (changed > 0) {
+            notify.flashSuccess(t("live_status_updates").replace("{n}", String(changed)));
+          }
+        } catch {
+          /* silent poll tick */
+        }
+      })();
+    }, 25000);
+    return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [identity?.role, identity?.scopes.join(",")]);
 
   if (!canScope(identity, "orders:read")) {
     return (

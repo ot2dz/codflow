@@ -244,7 +244,7 @@ export function CompanyProfileDetail({ providerCode }: { providerCode: string })
         <CompanyCarrierStockCard company={company} canManage={canManage} />
       )}
 
-      {(providerCode === "yalidine" || providerCode === "zr_express") && (
+      {(providerCode === "yalidine" || providerCode === "zr_express" || providerCode === "ecotrack" || providerCode.endsWith("_ecotrack")) && (
         <CompanyWebhookEventsCard company={company} />
       )}
     </div>

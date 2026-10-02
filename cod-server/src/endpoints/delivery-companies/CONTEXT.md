@@ -69,7 +69,7 @@ _Avoid_: Note, comment
 ### Tracking
 
 **Tracking Events**:
-Chronological carrier history (pickup, hub reception, transit, attempts, terminal state) pulled on demand. All four providers support pulls; only Yalidine and ZR Express push inbound webhooks.
+Chronological carrier history (pickup, hub reception, transit, attempts, terminal state). All four providers support pulls; Yalidine, ZR Express, and the EcoTrack family also push inbound webhooks.
 _Avoid_: Live tracking, tracking feed
 
 **Delivery Attempts**:

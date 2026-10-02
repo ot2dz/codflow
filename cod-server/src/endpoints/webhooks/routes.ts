@@ -24,6 +24,7 @@ import {
   handleYalidineChallenge,
   handleYalidineWebhook,
   handleZrWebhook,
+  handleEcotrackWebhook,
 } from "./handlers";
 
 const jsonContent = <T extends z.ZodType>(schema: T) => ({
@@ -158,6 +159,39 @@ Signature/payload failures are rejected with \`400 INVALID_WEBHOOK_PAYLOAD\`; pr
   handler: handleZrWebhook,
 });
 
+const ecotrackWebhookRoute = defineRoute({
+  method: "post",
+  path: "/ecotrack",
+  auth: "public",
+  tags: ["Webhooks"],
+  summary: "EcoTrack platform family event delivery",
+  description: `Receives webhook events from any EcoTrack tenant (Packers, DHD, Conexlog, …). One event per request. The sender is identified by signature: the delivery is verified against the stored webhook secret of every configured \`*_ecotrack\` company and the first match wins. Idempotency key is the \`X-ECOTRACK-Event-Id\` ULID header. Always returns 200.
+
+**Payload:** \`{ event: "order.state.<code>" | "order.maj.added", event_id, occurred_at, tracking, state: { id, code, title }, previous_state, maj, order }\`
+
+Signature/payload failures are rejected with \`400 INVALID_WEBHOOK_PAYLOAD\` (a forged delivery must never advance an order); processing failures surface as \`502 EXTERNAL_API_FAILURE\`. Without any configured secret the endpoint fail-opens, mirroring the Yalidine receiver.`,
+  operationId: "ecotrackWebhook",
+  headers: z.object({
+    "X-ECOTRACK-Event": z.string().optional().openapi({ description: "Event name (e.g. order.state.en_livraison)" }),
+    "X-ECOTRACK-Event-Id": z.string().optional().openapi({ description: "ULID idempotency key, stable across retries" }),
+    "X-ECOTRACK-Signature": z.string().optional().openapi({ description: "sha256=<hex HMAC> over the raw body" }),
+  }),
+  responses: {
+    200: receivedResponse,
+    400: webhookErrorResponse(
+      "INVALID_WEBHOOK_PAYLOAD",
+      "VALIDATION",
+      "Invalid webhook payload or signature (INVALID_WEBHOOK_PAYLOAD)"
+    ),
+    502: webhookErrorResponse(
+      "EXTERNAL_API_FAILURE",
+      "SYSTEM",
+      "Webhook processing failed (EXTERNAL_API_FAILURE)"
+    ),
+  },
+  handler: handleEcotrackWebhook,
+});
+
 // ─── Router ───────────────────────────────────────────────────────────────────
 
 const webhooksRouter = new OpenAPIHono<AppContext>();
@@ -165,5 +199,6 @@ const webhooksRouter = new OpenAPIHono<AppContext>();
 webhooksRouter.openapi(yalidineChallengeRoute.route, yalidineChallengeRoute.handler);
 webhooksRouter.openapi(yalidineWebhookRoute.route, yalidineWebhookRoute.handler);
 webhooksRouter.openapi(zrWebhookRoute.route, zrWebhookRoute.handler);
+webhooksRouter.openapi(ecotrackWebhookRoute.route, ecotrackWebhookRoute.handler);
 
 export default webhooksRouter;

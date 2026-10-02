@@ -98,9 +98,11 @@ export const ECOTRACK_CAPABILITIES: ProviderCapabilities = {
   requiresCustomerCreation: false,
   
   // ─── Webhooks ─────────────────────────────────────────────────────────
-  // Source: No webhook support
-  supportsWebhooks: false,
-  
-  // Source: No webhook support
-  webhookRegistrationType: null,
+  // Source: Shipper Integration Guide v1.0 (2026-05) — 22 order.state.*
+  // events + order.maj.added, HMAC-SHA256, registered in the EcoTrack
+  // (shipper) dashboard. Receiver: POST /webhooks/ecotrack.
+  supportsWebhooks: true,
+
+  // Registered manually per tenant (no registration API in the docs).
+  webhookRegistrationType: "manual",
 };

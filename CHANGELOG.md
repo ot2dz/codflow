@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- delivery: **EcoTrack inbound webhooks** (`POST /webhooks/ecotrack`) for the
+  whole `*_ecotrack` family (Packers, DHD, Conexlog, …) — real-time order
+  lifecycle without polling: all 22 documented `order.state.*` codes advance
+  order statuses through the shared forward-only rank guard, `order.maj.added`
+  increments delivery attempts with the driver's reason, and terminal states
+  trigger the Meta CAPI `Purchase` instantly. HMAC-SHA256 verification over
+  the raw body (`X-ECOTRACK-Signature`, per-tenant secret from the dashboard,
+  sender identified by which company's secret validates), ULID idempotency
+  (`X-ECOTRACK-Event-Id`, deduped in `webhook_events`), always-200 + retry
+  semantics per the Shipper Integration Guide v1.0. Arabic state labels are
+  surfaced in the per-company webhook events feed. The dashboard gains:
+  EcoTrack webhook setup card (URL + secret + 4 steps) on the credentials
+  page, the events feed on the company profile, and a silent 25-second
+  live-refresh on the orders list with a toast counting what changed.
+  Existing Yalidine/ZR flows unchanged; NOEST stays pull-only.
+
 - storefront: **theme02** (`cod-astro/theme02`) — a second swappable theme with
   a sharp red/gold COD identity modeled on a one-product landing page: the
   product page (`/products/[slug]`) renders a gallery column (prev/next arrows

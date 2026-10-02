@@ -210,17 +210,19 @@ export async function unregisterZrWebhook(c: Context<AppContext>) {
 /**
  * PATCH /api/delivery-companies/:id/webhook/secret
  *
- * Stores the Yalidine webhook secret key (entered manually by the admin
- * after setting up the webhook in the Yalidine dashboard).
+ * Stores the manual webhook secret (entered by the admin after creating the
+ * endpoint in the carrier dashboard). Supported for Yalidine and the
+ * EcoTrack platform family (*_ecotrack — e.g. packers_ecotrack).
  */
-export async function saveYalidineSecret(c: Context<AppContext>) {
+export async function saveCarrierWebhookSecret(c: Context<AppContext>) {
   const db = getDb(c.env.DB);
   const { id } = (c.req as any).valid?.("param") ?? { id: c.req.param("id")! };
 
   const company = await getDeliveryCompanyRaw(db, id);
   if (!company) throw new NotFoundError("Delivery company", id);
-  if (company.code !== "yalidine") {
-    throw new ValidationError("This endpoint is only for Yalidine webhook secrets", "OPERATION_NOT_SUPPORTED", { companyId: id });
+  const isEcotrack = company.code === "ecotrack" || company.code.endsWith("_ecotrack");
+  if (company.code !== "yalidine" && !isEcotrack) {
+    throw new ValidationError("This endpoint is only for Yalidine and EcoTrack webhook secrets", "OPERATION_NOT_SUPPORTED", { companyId: id });
   }
 
   let body: { secret?: string };

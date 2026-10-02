@@ -155,5 +155,10 @@
   "stock_fulfillment_title": "Préparation depuis le stock transporteur",
   "stock_fulfillment_hint": "L'expédition envoie stock=1 au transporteur en utilisant le SKU de chaque ligne. Le transporteur refuse les colis sans stock ; votre stock local n'est pas affecté.",
   "stock_fulfillment_on": "Préparation depuis le stock transporteur activée",
-  "stock_fulfillment_off": "Préparation depuis le stock transporteur désactivée"
+  "stock_fulfillment_off": "Préparation depuis le stock transporteur désactivée",
+  "webhook_step_1_ecotrack": "Ouvrez le tableau de bord EcoTrack de votre transporteur → Webhooks (Expéditeur → Webhooks).",
+  "webhook_step_2_ecotrack": "Créez un New endpoint, collez l'URL ci-dessus puis enregistrez.",
+  "webhook_step_3_ecotrack": "Abonnez l'endpoint à tous les événements order.state.* ainsi qu'à order.maj.added.",
+  "webhook_step_4_ecotrack": "Copiez la clé secrète de l'endpoint et collez-la ci-dessous — chaque livraison est vérifiée par HMAC-SHA256.",
+  "webhook_events_hint_ecotrack": "EcoTrack réessaie une livraison échouée jusqu'à 6 fois (~34,5 h), puis désactive l'endpoint — enregistrez le secret ici pour recevoir les statuts en temps réel."
 }

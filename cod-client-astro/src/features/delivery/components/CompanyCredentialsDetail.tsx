@@ -284,11 +284,12 @@ export function CompanyCredentialsDetail({ providerCode }: { providerCode: strin
         />
       </div>
 
-      {providerCode === "yalidine" && (
+      {(providerCode === "yalidine" || providerCode === "ecotrack" || providerCode.endsWith("_ecotrack")) && (
         <CompanyWebhookSetupCard
           company={company}
           canManage={canManage}
           onSaved={() => void load()}
+          variant={providerCode === "yalidine" ? "yalidine" : "ecotrack"}
         />
       )}
 

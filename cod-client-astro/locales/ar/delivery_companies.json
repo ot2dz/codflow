@@ -155,5 +155,10 @@
   "stock_fulfillment_title": "التجهيز من مخزون الناقل",
   "stock_fulfillment_hint": "يرسل الطلبية إلى الناقل بحالة stock=1 باستخدام SKU لكل سطر. الناقل يرفض الطلبات بلا مخزون؛ ومخزونك المحلي لا يتأثر.",
   "stock_fulfillment_on": "تم تفعيل التجهيز من مخزون الناقل",
-  "stock_fulfillment_off": "تم إيقاف التجهيز من مخزون الناقل"
+  "stock_fulfillment_off": "تم إيقاف التجهيز من مخزون الناقل",
+  "webhook_step_1_ecotrack": "افتح لوحة EcoTrack الخاصة بشركة التوصيل لديك → Webhooks (إكسبيديطور → Webhooks).",
+  "webhook_step_2_ecotrack": "أنشئ نقطة جديدة (New endpoint) والصق الرابط أعلاه ثم احفظ.",
+  "webhook_step_3_ecotrack": "فعّل الاشتراك في جميع أحداث order.state.* و order.maj.added.",
+  "webhook_step_4_ecotrack": "انسخ مفتاح السر الخاص بالنقطة والصقه أسفل — يتم التحقق من كل حدث بتوقيع HMAC-SHA256.",
+  "webhook_events_hint_ecotrack": "تعيد EcoTrack محاولة التسليم حتى 6 مرات (نافذة ~34.5 ساعة) ثم تعطّل النقطة عند الفشل — احفظ السر هنا لتستقبل الحالات لحظيًا."
 }

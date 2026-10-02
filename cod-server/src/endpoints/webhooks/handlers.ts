@@ -1,11 +1,12 @@
 /**
  * Webhook Handlers
  *
- * Handles inbound webhook deliveries from ZR Express and Yalidine.
+ * Handles inbound webhook deliveries from ZR Express, Yalidine, and the
+ * EcoTrack platform family (*_ecotrack companies — Packers, DHD, ...).
  *
  * Key rules (from docs):
- *   - rawBody MUST be read before JSON.parse (both providers verify raw bytes)
- *   - Always return 200 — both providers retry on non-200
+ *   - rawBody MUST be read before JSON.parse (all providers verify raw bytes)
+ *   - Always return 200 — all providers retry on non-200
  *   - Yalidine GET challenge must always respond, before any DB calls
  *   - parcel.state.situation.created → log only, never change order status
  *   - Idempotency is per-event, not per-request (Yalidine batches events)
@@ -14,7 +15,10 @@
 import type { Context } from "hono";
 import type { AppContext } from "@/types";
 import { getDb } from "@/db";
-import { getDeliveryCompanyByCode } from "@/endpoints/delivery-companies/queries";
+import {
+  getDeliveryCompanyByCode,
+  listEcotrackCompaniesRaw,
+} from "@/endpoints/delivery-companies/queries";
 import {
   insertWebhookEvent,
   updateWebhookEvent,
@@ -29,8 +33,13 @@ import { ORDER_STATUSES } from "../orders/validation";
 import type { OrderStatus } from "../../../../cod-shared/db/schema";
 import { verifySvixSignature } from "./svix-verify";
 import { verifyYalidineSignature } from "./yalidine-verify";
+import { verifyEcotrackSignature } from "./ecotrack-verify";
 import { mapZrStateName, parseCustomMapping } from "./zr-status-mapper";
 import { mapYalidineStatus } from "./yalidine-status-mapper";
+import {
+  mapEcotrackWebhookState,
+  mapEcotrackMajType,
+} from "./ecotrack-status-mapper";
 import { ValidationError, ExternalApiError } from "@/lib/errors/classes";
 import { ERROR_CODES } from "../../../../cod-shared/errors/codes";
 
@@ -499,4 +508,227 @@ export async function handleYalidineWebhook(c: Context<AppContext>) {
   }
 
   return c.json({ received: true }, 200);
+}
+
+// ─── EcoTrack platform family (Packers, DHD, Conexlog, …) ─────────────────────
+
+interface EcotrackStatePayload {
+  event?: string;
+  event_id?: string;
+  occurred_at?: string;
+  tracking?: string;
+  state?: { id?: number; code?: string; title?: string };
+  previous_state?: { id?: number; code?: string; title?: string } | null;
+  order?: { amount?: number; tentatives_count?: number } | null;
+  maj?: { type?: string; tentative_number?: number; raison?: string | null } | null;
+}
+
+/**
+ * POST /webhooks/ecotrack
+ *
+ * Receives EcoTrack platform webhook deliveries (§2 of the Shipper
+ * Integration Guide). One event per request; idempotency key is the
+ * `X-ECOTRACK-Event-Id` ULID header (stable across the carrier's 6 retries).
+ *
+ * The webhook is registered by the shipper in their EcoTrack dashboard, so
+ * the sender is identified by signature, not by URL: every *_ecotrack
+ * company with a stored webhook_secret is a candidate and the first secret
+ * whose HMAC matches the raw body wins. No secret configured anywhere →
+ * fail-open with a warning (same contract as Yalidine). No candidate matches
+ * → 400 (the carrier's docs retry non-2xx; a forged delivery must never
+ * advance an order).
+ *
+ * order.state.* → forward-only status transition via updateOrderStatusWebhook.
+ * order.maj.added → deliveryAttempts counter + reason, never a status change.
+ */
+export async function handleEcotrackWebhook(c: Context<AppContext>) {
+  const rawBody = await c.req.text();
+  const db = getDb(c.env.DB);
+
+  let payload: EcotrackStatePayload;
+  try {
+    payload = JSON.parse(rawBody);
+  } catch {
+    console.error("[webhook][ecotrack] Failed to parse JSON body");
+    throw new ValidationError(
+      "Invalid JSON payload",
+      ERROR_CODES.INVALID_WEBHOOK_PAYLOAD,
+      { provider: "ecotrack" }
+    );
+  }
+
+  const signature = c.req.header("x-ecotrack-signature") ?? null;
+  const candidates = await listEcotrackCompaniesRaw(db);
+  if (candidates.length === 0) {
+    console.warn("[webhook][ecotrack] No *_ecotrack delivery company configured");
+    return c.json({ received: true }, 200);
+  }
+
+  const secretHolders = candidates.filter((company) => company.webhookSecret);
+  let company = candidates[0];
+  if (secretHolders.length > 0) {
+    let verified = false;
+    for (const candidate of secretHolders) {
+      if (await verifyEcotrackSignature(rawBody, signature, candidate.webhookSecret!)) {
+        company = candidate;
+        verified = true;
+        break;
+      }
+    }
+    if (!verified) {
+      console.warn("[webhook][ecotrack] Signature verification failed");
+      throw new ValidationError(
+        "Invalid webhook signature",
+        ERROR_CODES.INVALID_WEBHOOK_PAYLOAD,
+        { provider: "ecotrack" }
+      );
+    }
+  } else {
+    console.warn(
+      "[webhook][ecotrack] webhookSecret not set — accepting unverified events " +
+      "(set the secret in the dashboard to enable verification)"
+    );
+  }
+
+  const eventType =
+    c.req.header("x-ecotrack-event") ?? payload.event ?? "unknown";
+  const eventId =
+    c.req.header("x-ecotrack-event-id") ?? payload.event_id ?? crypto.randomUUID();
+  const tracking = payload.tracking ?? null;
+  const now = new Date().toISOString();
+
+  const { id: webhookEventId, isDuplicate } = await insertWebhookEvent(db, {
+    provider: "ecotrack",
+    eventId,
+    companyId: company.id,
+    tracking,
+    eventType,
+    rawPayload: rawBody,
+  });
+
+  if (isDuplicate) {
+    return c.json({ received: true }, 200);
+  }
+
+  try {
+    // ── Delivery attempts (order.maj.added) — counter + reason, no status ──
+    if (eventType.startsWith("order.maj")) {
+      const majType = payload.maj?.type ?? null;
+      const mapping = mapEcotrackMajType(majType);
+
+      if (mapping.incrementAttempts) {
+        const order = tracking ? await getOrderByTracking(db, tracking) : null;
+        if (order && !TERMINAL_ORDER_STATUSES.has(order.status)) {
+          await incrementDeliveryAttempts(db, order.id);
+        }
+        const raison = payload.maj?.raison ?? null;
+        await updateWebhookEvent(db, webhookEventId, {
+          result: "ignored", // never a status transition
+          reason: raison ? `${mapping.ar} — ${raison}` : mapping.ar,
+          orderId: order?.id ?? undefined,
+          processedAt: now,
+        });
+      } else {
+        await updateWebhookEvent(db, webhookEventId, {
+          result: mapping.noop ? "ignored" : "unmapped",
+          reason: majType ?? undefined,
+          processedAt: now,
+        });
+      }
+      return c.json({ received: true }, 200);
+    }
+
+    // ── Status transitions (order.state.*) ──
+    if (eventType.startsWith("order.state.")) {
+      const code =
+        payload.state?.code ?? eventType.slice("order.state.".length) ?? null;
+      const mapping = mapEcotrackWebhookState(code);
+
+      if (mapping.status === null || !isOrderStatus(mapping.status)) {
+        await updateWebhookEvent(db, webhookEventId, {
+          result: "unmapped",
+          reason: code ?? undefined,
+          processedAt: now,
+        });
+        return c.json({ received: true }, 200);
+      }
+      const nextStatus: OrderStatus = mapping.status;
+
+      if (!tracking) {
+        await updateWebhookEvent(db, webhookEventId, {
+          result: "ignored",
+          reason: mapping.ar,
+          processedAt: now,
+        });
+        return c.json({ received: true }, 200);
+      }
+
+      const order = await getOrderByTracking(db, tracking);
+      if (!order) {
+        await updateWebhookEvent(db, webhookEventId, {
+          result: "ignored",
+          reason: mapping.ar,
+          processedAt: now,
+        });
+        return c.json({ received: true }, 200);
+      }
+
+      const { updated } = await updateOrderStatusWebhook(
+        db,
+        order.id,
+        nextStatus,
+        "webhook:ecotrack"
+      );
+
+      if (updated && shouldTriggerCapiPurchase(nextStatus, order.wilayaId)) {
+        if (!c.env.CAPI_WORKFLOW) {
+          console.error("[capi-workflow] CAPI_WORKFLOW binding is undefined — worker needs re-provision");
+        } else {
+          c.executionCtx.waitUntil(
+            c.env.CAPI_WORKFLOW.create({
+              id: getCapiWorkflowId(order.id, "delivered", "Purchase"),
+              params: {
+                orderId: order.id,
+                eventName: "Purchase",
+                stage: "delivered",
+                triggeredAt: Math.floor(Date.now() / 1000),
+                triggerStatus: nextStatus,
+              },
+            }).catch((err: unknown) => console.error("[capi-workflow] ecotrack trigger failed:", (err as Error)?.message))
+          );
+        }
+      }
+
+      await updateWebhookEvent(db, webhookEventId, {
+        result: updated ? "ok" : "ignored",
+        newStatus: updated ? nextStatus : undefined,
+        reason: mapping.ar,
+        orderId: order.id,
+        processedAt: now,
+      });
+      return c.json({ received: true }, 200);
+    }
+
+    // Unknown event family — log and ignore
+    await updateWebhookEvent(db, webhookEventId, {
+      result: "ignored",
+      reason: eventType,
+      processedAt: now,
+    });
+    return c.json({ received: true }, 200);
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    console.error("[webhook][ecotrack] Processing error:", errorMsg);
+    await updateWebhookEvent(db, webhookEventId, {
+      result: "error",
+      errorMsg,
+      processedAt: now,
+    }).catch(() => {});
+
+    throw new ExternalApiError(
+      "ecotrack",
+      "Webhook processing failed",
+      { webhookId: eventId, tracking, errorMsg }
+    );
+  }
 }

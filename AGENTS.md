@@ -131,9 +131,11 @@ other is how these drift.
   MCP client token flows may need that alignment before heavy use.
 - The dashboard Worker and the storefront both default to port **4321** — run
   one on `--port 4322` when developing both at once.
-- Inbound webhooks exist only for **Yalidine** and **ZR Express**. NOEST and
-  EcoTrack tracking is pulled on demand via `GET /orders/:id/tracking` — there
-  is no inbound receiver for them.
+- Inbound webhooks exist for **Yalidine**, **ZR Express**, and the
+  **EcoTrack platform family** (`POST /webhooks/ecotrack` — HMAC-SHA256,
+  ULID dedupe, 22 order.state.* codes + order.maj.added). NOEST tracking is
+  pulled on demand via `GET /orders/:id/tracking` — there is no inbound
+  receiver for it.
 - cod-server tests run on miniflare + better-sqlite3 locally with no network
   or credentials required.
 

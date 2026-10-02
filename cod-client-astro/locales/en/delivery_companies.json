@@ -155,5 +155,10 @@
   "stock_fulfillment_title": "Fulfil from carrier stock",
   "stock_fulfillment_hint": "Dispatch sends this carrier stock=1 using each order line's SKU. The carrier refuses out-of-stock parcels; your local inventory is not affected.",
   "stock_fulfillment_on": "Fulfilment from carrier stock enabled",
-  "stock_fulfillment_off": "Fulfilment from carrier stock disabled"
+  "stock_fulfillment_off": "Fulfilment from carrier stock disabled",
+  "webhook_step_1_ecotrack": "Open your courier's EcoTrack dashboard → Webhooks (Expéditeur → Webhooks).",
+  "webhook_step_2_ecotrack": "Create a New endpoint, paste the URL above, and save.",
+  "webhook_step_3_ecotrack": "Subscribe the endpoint to all order.state.* events plus order.maj.added.",
+  "webhook_step_4_ecotrack": "Copy the endpoint's secret key and paste it below — every delivery is verified with HMAC-SHA256.",
+  "webhook_events_hint_ecotrack": "EcoTrack retries a failed delivery up to 6 times (~34.5h window), then disables the endpoint — keep the secret saved to receive live statuses."
 }

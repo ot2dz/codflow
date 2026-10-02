@@ -9,30 +9,31 @@ import { saveYalidineSecret } from "@/features/delivery/api";
 import type { DeliveryCompany } from "@/features/delivery/types";
 
 /**
- * Yalidine webhook setup — lives on the credentials page (the webhook status
- * card on the company profile links here).
+ * Manual webhook setup for carriers that register the endpoint in THEIR
+ * dashboard (Yalidine and the EcoTrack family — Packers, DHD, …).
  *
  * The receiver URL is derived from the API base (never hardcoded); the
- * secret saves through the existing PATCH /webhook/secret endpoint. The
- * steps mirror the official dashboard flow (webook.md "Steps to receive
- * webhooks"): create the endpoint in Yalidine's Webhooks Dashboard with our
- * URL (the CRC challenge auto-validates — the receiver echoes crc_token),
- * subscribe to the event types, copy the secret back here, activate.
+ * secret saves through the shared PATCH /webhook/secret endpoint. The steps
+ * mirror each carrier's official dashboard flow — variant picks the step
+ * key set and the receiver path.
  */
 export function CompanyWebhookSetupCard({
   company,
   canManage,
   onSaved,
+  variant = "yalidine",
 }: {
   company: DeliveryCompany | null;
   canManage: boolean;
   onSaved: () => void | Promise<void>;
+  variant?: "yalidine" | "ecotrack";
 }) {
   const t = useT("delivery_companies");
   const [secret, setSecret] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const webhookUrl = `${PUBLIC_API_URL}/webhooks/yalidine`;
+  const webhookUrl = `${PUBLIC_API_URL}/webhooks/${variant}`;
+  const stepSuffix = variant === "ecotrack" ? "_ecotrack" : "";
   const secretSet = !!company?.webhookSecret;
 
   function copyUrl() {
@@ -113,7 +114,7 @@ export function CompanyWebhookSetupCard({
               <span className="grid size-5 shrink-0 place-items-center rounded-full bg-primary/10 text-[10px] font-bold text-primary">
                 {step}
               </span>
-              <span className="leading-5">{t(`webhook_step_${step}`)}</span>
+              <span className="leading-5">{t(`webhook_step_${step}${stepSuffix}`)}</span>
             </li>
           ))}
         </ol>
@@ -142,7 +143,7 @@ export function CompanyWebhookSetupCard({
 
         <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground/70">
           <ExternalLink size={12} aria-hidden="true" className="shrink-0" />
-          {t("webhook_events_hint")}
+          {t(`webhook_events_hint${stepSuffix}`)}
         </p>
       </div>
     </div>
