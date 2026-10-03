@@ -77,6 +77,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- storefront: **Free-shipping flag now honoured on landing pages** — the LP
+  `#page-data` bridge never emitted `data-free-shipping`, so the client form
+  still displayed a delivery fee on a product tagged free-shipping (the
+  server charged the correct zero fee; the display contradicted it). Both
+  `theme01` and `theme02` LP templates now pass the flag like the product
+  page does.
 - delivery: Yalidine webhook signature verification implemented (HMAC-SHA256
   over raw body, hex digest, constant-time compare) — previously a TODO that
   accepted unsigned events

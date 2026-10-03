@@ -98,6 +98,7 @@ const metaDescription = lp.metaDescription || config.metaDescription || undefine
         data-commune-loading={content.formCommuneLoading}
         data-commune-disabled={content.formCommuneDisabled}
         data-offers={JSON.stringify(product.offers)}
+        data-free-shipping={product.freeShipping ? "1" : "0"}
         data-offer-free-label={content.offerFreeLabel}
         data-offer-active={content.offerActive}
         data-offer-unlocked={content.offerUnlocked}
