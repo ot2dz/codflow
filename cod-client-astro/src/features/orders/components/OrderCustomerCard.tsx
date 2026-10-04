@@ -2,9 +2,21 @@ import { MapPin, Phone, UserRound } from "lucide-react";
 import { Card } from "@/components/ui";
 import { useT } from "@/i18n/react";
 import type { OrderDetail } from "@/features/orders/types";
+import { WhatsAppContactButton } from "@/features/orders/components/WhatsAppContactButton";
 
 interface OrderCustomerCardProps {
-  order: Pick<OrderDetail, "customerName" | "phone" | "wilaya" | "commune" | "address">;
+  order: Pick<
+    OrderDetail,
+    | "customerName"
+    | "phone"
+    | "wilaya"
+    | "commune"
+    | "address"
+    | "orderNumber"
+    | "status"
+    | "price"
+    | "deliveryFee"
+  >;
 }
 
 export function OrderCustomerCard({ order }: OrderCustomerCardProps) {
@@ -22,14 +34,20 @@ export function OrderCustomerCard({ order }: OrderCustomerCardProps) {
             <p className="mt-1 text-sm font-semibold">
               {order.customerName}
             </p>
-            <a
-              href={`tel:${order.phone}`}
-              className="mt-1 inline-flex items-center gap-1 text-sm text-link"
-              dir="ltr"
-            >
-              <Phone size={13} />
-              {order.phone}
-            </a>
+            <div className="mt-1 flex items-center gap-1.5">
+              <a
+                href={`tel:${order.phone}`}
+                className="inline-flex items-center gap-1 text-sm text-link"
+                dir="ltr"
+              >
+                <Phone size={13} />
+                {order.phone}
+              </a>
+              <WhatsAppContactButton
+                order={order}
+                statusLabel={t(`status.${order.status}`)}
+              />
+            </div>
           </div>
         </div>
         <div className="flex items-start gap-3">

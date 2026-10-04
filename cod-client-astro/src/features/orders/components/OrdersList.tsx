@@ -43,6 +43,7 @@ import {
   SortHeader,
 } from "@/components/ui";
 import { OrderDesktopRow, OrderMobileCard } from "@/features/orders/components/OrderRow";
+import { WhatsAppTemplateSettings } from "@/features/orders/components/WhatsAppTemplateSettings";
 
 const EMPTY_FILTERS: OrderFilters = {
   query: "",
@@ -560,9 +561,12 @@ export function OrdersList() {
                       direction={sortDirection}
                       onSort={handleSort}
                     />
-                    <TableHead className="text-start">
-                      {t("table.phone")}
-                    </TableHead>
+                <TableHead className="text-start">
+                  <span className="inline-flex items-center gap-1.5">
+                    {t("table.phone")}
+                    <WhatsAppTemplateSettings />
+                  </span>
+                </TableHead>
                     <SortHeader
                       label={t("table.status")}
                       sortKey="status"

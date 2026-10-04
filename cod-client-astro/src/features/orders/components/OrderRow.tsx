@@ -13,6 +13,7 @@ import type {
 import { OrderStatus } from "@/features/orders/components/OrderStatus";
 import { OrderDelivery } from "@/features/orders/components/OrderDelivery";
 import { OrderRowActions } from "@/features/orders/components/OrderFulfillmentActions";
+import { WhatsAppContactButton } from "@/features/orders/components/WhatsAppContactButton";
 
 interface RowProps {
   order: OrderListItem;
@@ -108,9 +109,15 @@ export function OrderDesktopRow({
         <p className="font-medium text-foreground">{order.customerName}</p>
       </TableCell>
       <TableCell>
-        <span className="text-xs text-muted-foreground" dir="ltr">
-          {order.phone}
-        </span>
+        <div className="flex items-center gap-1">
+          <span className="text-xs text-muted-foreground" dir="ltr">
+            {order.phone}
+          </span>
+          <WhatsAppContactButton
+            order={order}
+            statusLabel={t(`status.${order.status}`)}
+          />
+        </div>
       </TableCell>
       <TableCell>
         <OrderStatus order={order} onChanged={onChanged} onError={onError} />
@@ -183,8 +190,12 @@ export function OrderMobileCard({
           <p className="mt-0.5 truncate text-sm font-medium text-foreground">
             {order.customerName}
           </p>
-          <p className="mt-0.5 text-xs text-muted-foreground" dir="ltr">
-            {order.phone}
+          <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+            <span dir="ltr">{order.phone}</span>
+            <WhatsAppContactButton
+              order={order}
+              statusLabel={t(`status.${order.status}`)}
+            />
           </p>
           {!duplicate && onToggleDuplicates && duplicateCount > 0 && (
             <div className="mt-1.5">

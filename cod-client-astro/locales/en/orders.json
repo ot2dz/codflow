@@ -345,5 +345,12 @@
     },
     "recovered_order": "Order {number}"
   },
-  "live_status_updates": "{n} orders updated"
+  "live_status_updates": "{n} orders updated",
+  "whatsapp_open": "Message on WhatsApp",
+  "whatsapp_invalid_phone": "This phone number cannot be opened in WhatsApp",
+  "wa_template_title": "WhatsApp message template",
+  "wa_template_desc": "Each WhatsApp button opens a chat with this personalised message. Tokens in braces are replaced automatically.",
+  "wa_template_save": "Save template",
+  "wa_template_saved": "Template saved",
+  "wa_template_reset": "Restore default"
 }

@@ -345,5 +345,12 @@
     },
     "recovered_order": "الطلب {number}"
   },
-  "live_status_updates": "تم تحديث حالة {n} من الطلبات"
+  "live_status_updates": "تم تحديث حالة {n} من الطلبات",
+  "whatsapp_open": "مراسلة عبر واتساب",
+  "whatsapp_invalid_phone": "لا يمكن فتح هذا الرقم في واتساب",
+  "wa_template_title": "قالب رسالة واتساب",
+  "wa_template_desc": "كل زر واتساب يفتح محادثة بهذه الرسالة المخصصة — الكلمات بين الأقواس تستبدل تلقائيًا.",
+  "wa_template_save": "حفظ القالب",
+  "wa_template_saved": "تم حفظ القالب",
+  "wa_template_reset": "استعادة الافتراضي"
 }

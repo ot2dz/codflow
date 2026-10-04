@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- dashboard: **one-tap WhatsApp outreach per order** — a WhatsApp button now
+  sits next to the phone number in the orders table (desktop + mobile card)
+  and on the order's customer card. Clicking opens `wa.me` with a
+  personalised message built from an editable template (`{customer}`,
+  `{order}`, `{status}`, `{total}`, `{wilaya}`); the template is edited from
+  a gear in the phone column header and persists locally. Algerian phone
+  forms (0X, +213, 00213, bare 5|6|7) normalise automatically; un-dialable
+  numbers surface a localized error instead of a broken chat.
 - delivery: **EcoTrack inbound webhooks** (`POST /webhooks/ecotrack`) for the
   whole `*_ecotrack` family (Packers, DHD, Conexlog, …) — real-time order
   lifecycle without polling: all 22 documented `order.state.*` codes advance

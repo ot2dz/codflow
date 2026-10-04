@@ -345,5 +345,12 @@
     },
     "recovered_order": "Commande {number}"
   },
-  "live_status_updates": "{n} commandes mises à jour"
+  "live_status_updates": "{n} commandes mises à jour",
+  "whatsapp_open": "Message WhatsApp",
+  "whatsapp_invalid_phone": "Ce numéro ne peut pas être ouvert dans WhatsApp",
+  "wa_template_title": "Modèle de message WhatsApp",
+  "wa_template_desc": "Chaque bouton WhatsApp ouvre une discussion avec ce message personnalisé — les jetons entre accolades sont remplacés automatiquement.",
+  "wa_template_save": "Enregistrer le modèle",
+  "wa_template_saved": "Modèle enregistré",
+  "wa_template_reset": "Restaurer par défaut"
 }
