@@ -28,6 +28,34 @@ interface RowProps {
   /** Primary row: whether the duplicates are currently shown. */
   duplicatesExpanded?: boolean;
   onToggleDuplicates?: () => void;
+  /** Bulk-selection mode (present when the viewer can act in bulk). */
+  selectable?: boolean;
+  selected?: boolean;
+  onToggleSelected?: () => void;
+  /** aria label for the selection checkbox (built by the list). */
+  selectionLabel?: string;
+}
+
+function SelectionCheckbox({
+  checked,
+  onChange,
+  label,
+  className = "",
+}: {
+  checked: boolean;
+  onChange: () => void;
+  label: string;
+  className?: string;
+}) {
+  return (
+    <input
+      type="checkbox"
+      checked={checked}
+      onChange={onChange}
+      aria-label={label}
+      className={`size-4 shrink-0 cursor-pointer accent-primary ${className}`}
+    />
+  );
 }
 
 function DuplicateToggle({
@@ -67,6 +95,10 @@ export function OrderDesktopRow({
   duplicateCount = 0,
   duplicatesExpanded = false,
   onToggleDuplicates,
+  selectable = false,
+  selected = false,
+  onToggleSelected,
+  selectionLabel = "",
 }: RowProps) {
   const locale = useLocale();
   const t = useT("orders");
@@ -74,8 +106,20 @@ export function OrderDesktopRow({
     <TableRow
       className={`border-b border-border last:border-0 transition-colors ${
         duplicate ? "bg-muted/30 opacity-70" : "hover:bg-muted/40"
-      }`}
+      } ${selected && !duplicate ? "bg-primary/5" : ""}`}
     >
+      {selectable && (
+        <TableCell className="w-10 pe-0 ps-4">
+          {!duplicate && (
+            <SelectionCheckbox
+              checked={selected}
+              onChange={() => onToggleSelected?.()}
+              label={`${selectionLabel} ${order.orderNumber}`}
+              className="align-middle"
+            />
+          )}
+        </TableCell>
+      )}
       <TableCell>
         <div className="flex items-center gap-2">
           <a
@@ -164,14 +208,31 @@ export function OrderMobileCard({
   duplicateCount = 0,
   duplicatesExpanded = false,
   onToggleDuplicates,
+  selectable = false,
+  selected = false,
+  onToggleSelected,
+  selectionLabel = "",
 }: RowProps) {
   const locale = useLocale();
   const t = useT("orders");
   return (
-    <article className={duplicate ? "bg-muted/30 p-4 opacity-70" : "p-4"}>
+    <article
+      className={
+        duplicate
+          ? "bg-muted/30 p-4 opacity-70"
+          : `p-4 ${selected ? "bg-primary/5" : ""}`
+      }
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
+            {selectable && !duplicate && (
+              <SelectionCheckbox
+                checked={selected}
+                onChange={() => onToggleSelected?.()}
+                label={`${selectionLabel} ${order.orderNumber}`}
+              />
+            )}
             <a
               href={`/orders/${order.id}`}
               className="text-sm font-semibold text-link hover:underline"

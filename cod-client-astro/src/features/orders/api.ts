@@ -86,6 +86,42 @@ export function deleteOrder(id: string) {
   return apiFetch<DataEnvelope<null>>(`/api/orders/${encodeURIComponent(id)}`, { method: "DELETE" });
 }
 
+export interface BulkResult {
+  ok: number;
+  failed: number;
+}
+
+async function runBulk(ids: string[], work: (id: string) => Promise<unknown>): Promise<BulkResult> {
+  const results = await Promise.allSettled(ids.map(work));
+  let ok = 0;
+  let failed = 0;
+  for (const result of results) {
+    if (result.status === "fulfilled") ok++;
+    else failed++;
+  }
+  return { ok, failed };
+}
+
+/**
+ * Set the same status on every selected order via the existing PATCH endpoint.
+ * The server's forward-only guard still decides per order — orders whose
+ * transition is invalid fail individually and are counted, never guessed.
+ */
+export function bulkUpdateOrderStatus(ids: string[], status: string): Promise<BulkResult> {
+  return runBulk(ids, (id) =>
+    apiFetch<DataEnvelope<null>>(
+      `/api/orders/${encodeURIComponent(id)}/status`,
+      json({ method: "PATCH", body: JSON.stringify({ status }) }),
+    ),
+  );
+}
+
+export function bulkDeleteOrders(ids: string[]): Promise<BulkResult> {
+  return runBulk(ids, (id) =>
+    apiFetch<DataEnvelope<null>>(`/api/orders/${encodeURIComponent(id)}`, { method: "DELETE" }),
+  );
+}
+
 export function assignDriver(id: string, driverId: string) {
   return apiFetch<DataEnvelope<null>>(`/api/orders/${encodeURIComponent(id)}/assign-driver`, json({ method: "PATCH", body: JSON.stringify({ driverId }) }));
 }

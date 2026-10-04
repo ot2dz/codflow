@@ -352,5 +352,17 @@
   "wa_template_desc": "كل زر واتساب يفتح محادثة بهذه الرسالة المخصصة — الكلمات بين الأقواس تستبدل تلقائيًا.",
   "wa_template_save": "حفظ القالب",
   "wa_template_saved": "تم حفظ القالب",
-  "wa_template_reset": "استعادة الافتراضي"
+  "wa_template_reset": "استعادة الافتراضي",
+  "bulk_selected": "حدَّدتَ {n} طلبية",
+  "bulk_select_all": "تحديد كل المعروض",
+  "bulk_select_order": "تحديد الطلبية",
+  "bulk_clear": "إلغاء التحديد",
+  "bulk_status_label": "حالة جديدة",
+  "bulk_apply_status": "تغيير الحالة",
+  "bulk_delete": "حذف المحدد",
+  "bulk_delete_confirm_title": "حذف {n} طلبية؟",
+  "bulk_delete_confirm_desc": "سيُحذف العدد المحدد من الطلبات مع سجلاتها نهائيًا. لا يمكن التراجع عن هذا الإجراء.",
+  "bulk_working": "جارٍ التنفيذ…",
+  "bulk_done": "تمت معالجة {ok} طلبية بنجاح",
+  "bulk_partial": "نجحت {ok} وفشلت {failed} — الانتقالات غير الصالحة أو الحالات النهائية تُرفض لكل طلبية على حدة"
 }

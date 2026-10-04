@@ -87,6 +87,72 @@ export interface OrderUnit {
   duplicates: OrderListItem[];
 }
 
+/** Every order id a unit covers (primary + its collapsed duplicates). */
+export function unitOrderIds(unit: OrderUnit): string[] {
+  return [unit.primary.id, ...unit.duplicates.map((d) => d.id)];
+}
+
+/** Select the unit if any part of it is missing, deselect the whole unit otherwise. */
+export function toggleUnitSelection(
+  previous: ReadonlySet<string>,
+  unit: OrderUnit,
+): Set<string> {
+  const ids = unitOrderIds(unit);
+  const next = new Set(previous);
+  const selected = ids.every((id) => next.has(id));
+  for (const id of ids) {
+    if (selected) next.delete(id);
+    else next.add(id);
+  }
+  return next;
+}
+
+export function unitSelected(unit: OrderUnit, selected: ReadonlySet<string>): boolean {
+  return unitOrderIds(unit).every((id) => selected.has(id));
+}
+
+export function allVisibleSelected(
+  units: readonly OrderUnit[],
+  selected: ReadonlySet<string>,
+): boolean {
+  const ids = units.flatMap(unitOrderIds);
+  return ids.length > 0 && ids.every((id) => selected.has(id));
+}
+
+export function toggleVisibleSelection(
+  previous: ReadonlySet<string>,
+  units: readonly OrderUnit[],
+): Set<string> {
+  const ids = units.flatMap(unitOrderIds);
+  const next = new Set(previous);
+  const all = ids.every((id) => next.has(id));
+  for (const id of ids) {
+    if (all) next.delete(id);
+    else next.add(id);
+  }
+  return next;
+}
+
+/** Drop selected ids that no longer exist (after a bulk delete / reload). */
+export function pruneSelection(
+  previous: ReadonlySet<string>,
+  existingIds: ReadonlySet<string>,
+): Set<string> {
+  const next = new Set<string>();
+  for (const id of previous) {
+    if (existingIds.has(id)) next.add(id);
+  }
+  return next;
+}
+
+/** Target statuses offered by the bulk status picker. */
+export const BULK_STATUS_TARGETS: OrderStatus[] = [...FILTER_STATUSES];
+
+export interface BulkResult {
+  ok: number;
+  failed: number;
+}
+
 /**
  * Collapse orders that belong to the same customer (same phone) into a single
  * display unit. The newest order becomes the primary row; the rest hang off it

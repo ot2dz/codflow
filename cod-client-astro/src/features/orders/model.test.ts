@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   ALLOWED_TRANSITIONS,
   ORDER_GROUPS,
+  allVisibleSelected,
   detailStatusActions,
   dispatchFieldSupport,
   canAssignOrder,
@@ -18,9 +19,14 @@ import {
   orderStatusFlow,
   orderStatusOptions,
   paginateOrders,
+  pruneSelection,
   shipmentCapabilities,
   shipmentUpdateFieldSupport,
   sortOrders,
+  toggleUnitSelection,
+  toggleVisibleSelection,
+  unitOrderIds,
+  unitSelected,
 } from "./model";
 import type { OrderListItem, OrderStatus } from "./types";
 import type { OrderGroupKey } from "./model";
@@ -457,5 +463,52 @@ describe("duplicate order grouping", () => {
       "0550000000",
     ]);
     expect(units[0].duplicates).toHaveLength(2);
+  });
+});
+
+describe("bulk selection", () => {
+  const u = (id: string, dupIds: string[] = []) => ({
+    primary: order({ id, orderNumber: `ORD-${id}` }),
+    duplicates: dupIds.map((d) => order({ id: d, orderNumber: `ORD-${d}` })),
+  });
+
+  it("unitOrderIds covers primary and collapsed duplicates", () => {
+    expect(unitOrderIds(u("1", ["2", "3"]))).toEqual(["1", "2", "3"]);
+  });
+
+  it("toggling a unit selects the whole group, then clears it", () => {
+    const unit = u("1", ["2"]);
+    const after = toggleUnitSelection(new Set(), unit);
+    expect([...after].sort()).toEqual(["1", "2"]);
+    const cleared = toggleUnitSelection(after, unit);
+    expect(cleared.size).toBe(0);
+  });
+
+  it("partial selection becomes complete on the next toggle", () => {
+    const unit = u("1", ["2", "3"]);
+    const partial = new Set(["1"]);
+    const after = toggleUnitSelection(partial, unit);
+    expect(unitSelected(unit, after)).toBe(true);
+    expect(after.size).toBe(3);
+  });
+
+  it("allVisibleSelected ignores units outside the visible page", () => {
+    const units = [u("1"), u("2")];
+    expect(allVisibleSelected(units, new Set(["1", "2", "99"]))).toBe(true);
+    expect(allVisibleSelected(units, new Set(["1"]))).toBe(false);
+    expect(allVisibleSelected([], new Set(["1"]))).toBe(false);
+  });
+
+  it("toggleVisibleSelection adds then removes the whole visible page", () => {
+    const units = [u("1", ["11"]), u("2")];
+    const all = toggleVisibleSelection(new Set(), units);
+    expect([...all].sort()).toEqual(["1", "11", "2"]);
+    const none = toggleVisibleSelection(all, units);
+    expect(none.size).toBe(0);
+  });
+
+  it("pruneSelection drops ids that no longer exist", () => {
+    const pruned = pruneSelection(new Set(["1", "2", "3"]), new Set(["1", "3"]));
+    expect([...pruned].sort()).toEqual(["1", "3"]);
   });
 });

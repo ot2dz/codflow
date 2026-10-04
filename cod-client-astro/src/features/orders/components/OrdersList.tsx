@@ -1,22 +1,30 @@
-import { Fragment, useDeferredValue, useEffect, useRef, useState } from "react";
-import { AlertCircle, Calendar, Filter, PackageOpen, X } from "lucide-react";
+import { Fragment, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { AlertCircle, Calendar, Check, Filter, PackageOpen, Trash2, X } from "lucide-react";
 import { canScope, useIdentity } from "@/features/auth/components/RequireAuth";
 import { useT } from "@/i18n/react";
 import { ApiError } from "@/lib/api";
 import { notify } from "@/lib/notify";
 import {
+  bulkDeleteOrders,
+  bulkUpdateOrderStatus,
   listAllOrders,
   listDeliveryCompanies,
   listDrivers,
 } from "@/features/orders/api";
 import {
+  BULK_STATUS_TARGETS,
   FILTER_STATUSES,
   ORDER_GROUPS,
+  allVisibleSelected,
   filterOrders,
   groupDuplicateOrders,
   orderGroupCounts,
   paginateOrders,
+  pruneSelection,
   sortOrders,
+  toggleUnitSelection,
+  toggleVisibleSelection,
+  unitSelected,
   type OrderFilters,
   type OrderGroupKey,
   type OrderSortKey,
@@ -26,8 +34,10 @@ import type {
   DeliveryCompany,
   Driver,
   OrderListItem,
+  OrderStatus,
 } from "@/features/orders/types";
 import {
+  Button,
   EmptyState,
   LinkButton,
   Alert,
@@ -41,6 +51,7 @@ import {
   TableRow,
   TableHead,
   SortHeader,
+  useConfirmDialog,
 } from "@/components/ui";
 import { OrderDesktopRow, OrderMobileCard } from "@/features/orders/components/OrderRow";
 import { WhatsAppTemplateSettings } from "@/features/orders/components/WhatsAppTemplateSettings";
@@ -128,6 +139,23 @@ export function OrdersList() {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [group, setGroup] = useState<OrderGroupKey>("all");
   const [showDuplicates, setShowDuplicates] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState<null | "status" | "delete">(null);
+  const [bulkStatus, setBulkStatus] = useState("");
+  const confirmBulk = useConfirmDialog();
+
+  // Selection keyed by order id; ids that vanish after a delete/reload are
+  // dropped without a second state write.
+  const selection = useMemo(
+    () =>
+      orders
+        ? pruneSelection(
+            selectedIds,
+            new Set(orders.map((order) => order.id)),
+          )
+        : new Set<string>(),
+    [orders, selectedIds],
+  );
   const [expandedUnits, setExpandedUnits] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number | "all">(() => {
@@ -314,6 +342,69 @@ export function OrdersList() {
     onChanged: load,
     onError: setActionError,
   };
+
+  // ── Bulk selection ────────────────────────────────────────────────────────
+  const canBulkStatus = canScope(identity, "orders:update");
+  const canBulkDelete = canScope(identity, "orders:delete");
+  const bulkCapable = canBulkStatus || canBulkDelete;
+
+  function toggleRowUnit(unit: OrderUnit) {
+    setSelectedIds((current) => toggleUnitSelection(current, unit));
+  }
+
+  function toggleAllVisible() {
+    setSelectedIds((current) => toggleVisibleSelection(current, visibleUnits));
+  }
+
+  function reportBulk(result: { ok: number; failed: number }) {
+    const message = result.failed
+      ? t("bulk_partial").replace("{ok}", String(result.ok)).replace("{failed}", String(result.failed))
+      : t("bulk_done").replace("{ok}", String(result.ok));
+    if (result.failed) notify.error(message);
+    else notify.flashSuccess(message);
+  }
+
+  async function runBulkStatus() {
+    if (!bulkStatus || bulkBusy) return;
+    const ids = [...selection];
+    setBulkBusy("status");
+    try {
+      const result = await bulkUpdateOrderStatus(ids, bulkStatus);
+      reportBulk(result);
+      setSelectedIds(new Set());
+      setBulkStatus("");
+      await load();
+    } catch (cause) {
+      setActionError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      setBulkBusy(null);
+    }
+  }
+
+  async function runBulkDelete() {
+    if (bulkBusy) return;
+    const count = selection.size;
+    const confirmed = await confirmBulk({
+      title: t("bulk_delete_confirm_title").replace("{n}", String(count)),
+      description: t("bulk_delete_confirm_desc"),
+      confirmLabel: t("bulk_delete"),
+      tone: "danger",
+    });
+    if (!confirmed) return;
+    const ids = [...selection];
+    setBulkBusy("delete");
+    try {
+      const result = await bulkDeleteOrders(ids);
+      reportBulk(result);
+      setSelectedIds(new Set());
+      await load();
+    } catch (cause) {
+      setActionError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      setBulkBusy(null);
+    }
+  }
+
 
   return (
     <div className="space-y-3">
@@ -526,6 +617,10 @@ export function OrdersList() {
                   <OrderMobileCard
                     order={unit.primary}
                     {...rowProps}
+                    selectable={bulkCapable}
+                    selected={unitSelected(unit, selection)}
+                    onToggleSelected={() => toggleRowUnit(unit)}
+                    selectionLabel={t("bulk_select_order")}
                     duplicateCount={unit.duplicates.length}
                     duplicatesExpanded={expandedUnits.has(unit.primary.id)}
                     onToggleDuplicates={() => toggleUnit(unit.primary.id)}
@@ -547,6 +642,20 @@ export function OrdersList() {
               <Table className="min-w-[1040px]">
                 <TableHeader>
                   <TableRow className="text-xs font-semibold text-muted-foreground">
+                    {bulkCapable && (
+                      <TableHead className="w-10 ps-4">
+                        <input
+                          type="checkbox"
+                          checked={
+                            visibleUnits.length > 0 &&
+                            allVisibleSelected(visibleUnits, selection)
+                          }
+                          onChange={toggleAllVisible}
+                          aria-label={t("bulk_select_all")}
+                          className="size-4 cursor-pointer accent-primary"
+                        />
+                      </TableHead>
+                    )}
                     <SortHeader
                       label={t("table.order_number")}
                       sortKey="orderNumber"
@@ -610,6 +719,10 @@ export function OrdersList() {
                       <OrderDesktopRow
                         order={unit.primary}
                         {...rowProps}
+                        selectable={bulkCapable}
+                        selected={unitSelected(unit, selection)}
+                        onToggleSelected={() => toggleRowUnit(unit)}
+                        selectionLabel={t("bulk_select_order")}
                         duplicateCount={unit.duplicates.length}
                         duplicatesExpanded={expandedUnits.has(unit.primary.id)}
                         onToggleDuplicates={() => toggleUnit(unit.primary.id)}
@@ -620,6 +733,7 @@ export function OrdersList() {
                             key={duplicate.id}
                             order={duplicate}
                             {...rowProps}
+                            selectable={bulkCapable}
                             duplicate
                           />
                         ))}
@@ -641,6 +755,72 @@ export function OrdersList() {
           </>
         )}
       </Card>
+
+      {bulkCapable && selection.size > 0 && (
+        <div
+          role="toolbar"
+          aria-label={t("bulk_selected").replace("{n}", String(selection.size))}
+          className="fixed inset-x-0 bottom-0 z-40 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))]"
+        >
+          <div className="mx-auto flex w-full max-w-3xl flex-wrap items-center gap-2 rounded-2xl border border-border bg-card px-4 py-3 shadow-2xl">
+            <span className="text-sm font-bold text-foreground">
+              {t("bulk_selected").replace("{n}", String(selection.size))}
+            </span>
+            <div className="ms-auto flex flex-wrap items-center justify-end gap-2">
+              {canBulkStatus && (
+                <>
+                  <Select
+                    aria-label={t("bulk_status_label")}
+                    value={bulkStatus}
+                    onChange={(event) => setBulkStatus(event.currentTarget.value)}
+                    variant="bare"
+                    size="sm"
+                    wrapperClassName="w-44 shrink-0 rounded-lg border border-border"
+                  >
+                    <option value="">{t("bulk_status_label")}</option>
+                    {BULK_STATUS_TARGETS.map((status) => (
+                      <option key={status} value={status}>
+                        {t(`status.${status}`)}
+                      </option>
+                    ))}
+                  </Select>
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={!bulkStatus || bulkBusy !== null}
+                    onClick={() => void runBulkStatus()}
+                  >
+                    <Check size={14} />
+                    {bulkBusy === "status" ? t("bulk_working") : t("bulk_apply_status")}
+                  </Button>
+                </>
+              )}
+              {canBulkDelete && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="dangerOutline"
+                  disabled={bulkBusy !== null}
+                  onClick={() => void runBulkDelete()}
+                >
+                  <Trash2 size={14} />
+                  {bulkBusy === "delete" ? t("bulk_working") : t("bulk_delete")}
+                </Button>
+              )}
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                disabled={bulkBusy !== null}
+                onClick={() => setSelectedIds(new Set())}
+              >
+                <X size={14} />
+                {t("bulk_clear")}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

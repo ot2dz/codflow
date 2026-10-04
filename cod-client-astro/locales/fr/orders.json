@@ -352,5 +352,17 @@
   "wa_template_desc": "Chaque bouton WhatsApp ouvre une discussion avec ce message personnalisé — les jetons entre accolades sont remplacés automatiquement.",
   "wa_template_save": "Enregistrer le modèle",
   "wa_template_saved": "Modèle enregistré",
-  "wa_template_reset": "Restaurer par défaut"
+  "wa_template_reset": "Restaurer par défaut",
+  "bulk_selected": "{n} sélectionnées",
+  "bulk_select_all": "Tout sélectionner",
+  "bulk_select_order": "Sélectionner la commande",
+  "bulk_clear": "Annuler la sélection",
+  "bulk_status_label": "Nouveau statut",
+  "bulk_apply_status": "Changer le statut",
+  "bulk_delete": "Supprimer la sélection",
+  "bulk_delete_confirm_title": "Supprimer {n} commandes ?",
+  "bulk_delete_confirm_desc": "Les commandes sélectionnées et leur historique seront supprimées définitivement. Action irréversible.",
+  "bulk_working": "En cours…",
+  "bulk_done": "{ok} commandes traitees avec succes",
+  "bulk_partial": "{ok} réussies, {failed} échouées — les transitions invalides ou les statuts terminaux sont refusés par commande"
 }

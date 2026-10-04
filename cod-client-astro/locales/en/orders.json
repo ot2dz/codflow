@@ -352,5 +352,17 @@
   "wa_template_desc": "Each WhatsApp button opens a chat with this personalised message. Tokens in braces are replaced automatically.",
   "wa_template_save": "Save template",
   "wa_template_saved": "Template saved",
-  "wa_template_reset": "Restore default"
+  "wa_template_reset": "Restore default",
+  "bulk_selected": "{n} selected",
+  "bulk_select_all": "Select all shown",
+  "bulk_select_order": "Select order",
+  "bulk_clear": "Clear selection",
+  "bulk_status_label": "New status",
+  "bulk_apply_status": "Change status",
+  "bulk_delete": "Delete selected",
+  "bulk_delete_confirm_title": "Delete {n} orders?",
+  "bulk_delete_confirm_desc": "The selected orders and their history will be permanently deleted. This cannot be undone.",
+  "bulk_working": "Working…",
+  "bulk_done": "Processed {ok} orders successfully",
+  "bulk_partial": "{ok} succeeded, {failed} failed — invalid or terminal transitions are rejected per order"
 }
