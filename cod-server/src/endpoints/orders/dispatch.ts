@@ -26,6 +26,39 @@ import { resolveCarrierWilayaName, resolveCarrierCommuneName } from "../../../..
 // flag; proxyShipmentLabel re-resolves the real URL on each click.
 export const DEFERRED_LABEL_MARKER = "deferred";
 
+interface ShipmentLine {
+  productName?: string | null;
+  variantLabel?: string | null;
+  quantity?: number | null;
+}
+
+/** Carrier string fields are capped at 255 chars (EcoTrack rule — others similar). */
+export const CARRIER_DESCRIPTION_MAX = 255;
+
+/**
+ * Human-readable parcel content for the carrier: every product name with the
+ * customer's variant selections and per-line quantities, plus the order
+ * number reference. Falls back to the bare order number when the order has
+ * no product lines. Truncated defensively to the carrier field limit.
+ */
+export function buildShipmentProductDescription(
+  orderNumber: string,
+  products: readonly ShipmentLine[] | undefined,
+): string {
+  const parts = (products ?? [])
+    .filter((p) => p.productName)
+    .map((p) => {
+      const label = p.variantLabel ? `${p.productName} (${p.variantLabel})` : p.productName!;
+      const qty = p.quantity ?? 1;
+      return qty > 1 ? `${label} ×${qty}` : label;
+    });
+  if (parts.length === 0) return orderNumber;
+  const description = `${[...new Set(parts)].join(", ")} — ${orderNumber}`;
+  return description.length > CARRIER_DESCRIPTION_MAX
+    ? description.slice(0, CARRIER_DESCRIPTION_MAX - 1) + "…"
+    : description;
+}
+
 /**
  * POST /orders/:id/dispatch
  * Dispatch order to the assigned delivery company via its API.
@@ -190,11 +223,12 @@ export async function dispatchToCompany(c: Context<AppContext>) {
 
   const startMs = Date.now();
   try {
-    // Build product description: unique product names joined, append order number
-    const uniqueProductNames = [...new Set((order.products ?? []).map((p) => p.productName).filter(Boolean))];
-    const productDescription = uniqueProductNames.length > 0
-      ? `${uniqueProductNames.join(", ")} — ${order.orderNumber}`
-      : order.orderNumber;
+    // Build parcel content: names + the customer's variant selections +
+    // quantities, so the carrier knows exactly what is in the box.
+    const productDescription = buildShipmentProductDescription(
+      order.orderNumber,
+      order.products,
+    );
 
     // Carrier-held stock fulfillment (EcoTrack): send `stock=1` with each order
     // line's SKU as the carrier product reference. There is deliberately no
@@ -555,7 +589,7 @@ export async function bulkDispatch(c: Context<AppContext>) {
         wilaya: wilayaName,
         commune: communeName,
         amount: order.price + (order.deliveryFee ?? 0),
-        productDescription: order.orderNumber,
+        productDescription: buildShipmentProductDescription(order.orderNumber, order.products),
         stopDesk: order.deliveryType === "stop_desk",
         stationCode: order.stationCode ?? undefined,
         reference: order.orderNumber,

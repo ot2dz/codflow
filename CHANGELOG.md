@@ -85,6 +85,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- delivery: dispatched parcels now carry the **customer's variant selections
+  and per-line quantities** to the carrier. The shipment description sent to
+  DHD/Packers/Yalidine/ZR/NOEST was the bare product-name list; it is built
+  as `المنتج (اختيار الزبون) ×الكمية` per line (order number appended,
+  truncated to the carrier's 255-char limit). Bulk dispatch previously sent
+  only the order number as the description — same rich string now.
 - storefront: **Free-shipping flag now honoured on landing pages** — the LP
   `#page-data` bridge never emitted `data-free-shipping`, so the client form
   still displayed a delivery fee on a product tagged free-shipping (the
