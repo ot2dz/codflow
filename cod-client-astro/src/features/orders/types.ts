@@ -79,6 +79,8 @@ export interface OrderBase {
   photos: string | null;
   weight: number | null;
   isFragile: boolean | null;
+  /** Test-mode snapshot: product-validation order (no stock yet). */
+  isTest?: boolean;
   codPaymentId?: string | null;
   feePaymentId?: string | null;
   createdAt: string;

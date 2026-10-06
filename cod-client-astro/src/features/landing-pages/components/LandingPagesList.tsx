@@ -198,6 +198,7 @@ export function LandingPagesList() {
         productId: dup.data.productId,
         productName: dup.data.product?.name ?? null,
         productHandle: dup.data.product?.handle ?? null,
+        isTest: dup.data.isTest ?? false,
         imageCount: dup.data.images.length,
         views: dup.data.views,
         orders: dup.data.stats.orders,

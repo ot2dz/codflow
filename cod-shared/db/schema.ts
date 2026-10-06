@@ -536,6 +536,14 @@ export const orders = sqliteTable("orders", {
   /** Fragile parcel flag — sent to carrier API when set (optional). */
   isFragile: integer("is_fragile", { mode: "boolean" }),
 
+  /**
+   * Test-mode snapshot: 1 when the order came from a test product or test
+   * landing page. Test orders live in the isolated test view, are blocked
+   * from dispatch, and are excluded from live analytics until promoted to a
+   * real order (flag flipped to 0 — same row, history preserved).
+   */
+  isTest: integer("is_test", { mode: "boolean" }).notNull().default(false),
+
   pickupTime: text("pickup_time"),
   deliveryTime: text("delivery_time"),
   deliveryAttempts: integer("delivery_attempts").default(0),
@@ -678,6 +686,13 @@ export const products = sqliteTable("products", {
    * cart-based free_shipping Offer (offers.discount_type).
    */
   freeShipping: integer("free_shipping", { mode: "boolean" }).notNull().default(false),
+  /**
+   * Test-mode flag: the product is being validated (no stock yet). Orders
+   * created from a test product/page land in the isolated "test orders"
+   * view, cannot be dispatched, and are excluded from live analytics until
+   * promoted. Product-level flag; a landing page may override it.
+   */
+  isTest: integer("is_test", { mode: "boolean" }).notNull().default(false),
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
 });
@@ -1172,6 +1187,12 @@ export const landingPages = sqliteTable("landing_pages", {
   status: text("status", { enum: ["draft", "published", "archived"] })
     .notNull()
     .default("draft"),
+  /**
+   * Test-mode page: every order this page creates is flagged as a test order
+   * (isolated view, dispatch blocked, excluded from live analytics) until the
+   * merchant buys stock and promotes them.
+   */
+  isTest: integer("is_test", { mode: "boolean" }).notNull().default(false),
 
   // ── Spacing settings (the entire Studio right sidebar) ────────────────────
   /** Pixels between stacked images. 0 = flush stack. */

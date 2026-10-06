@@ -156,7 +156,9 @@
     "variant_image": "Image",
     "variant_image_select": "Sélectionner image",
     "variant_image_remove": "Supprimer image",
-    "images_reorder_hint": "Utilisez les flèches pour réorganiser"
+    "images_reorder_hint": "Utilisez les flèches pour réorganiser",
+    "test_mode_label": "Produit en test (validation)",
+    "test_mode_hint": "Les commandes de ce produit arrivent dans la vue Tests isolée — sans stock, expédition bloquée jusqu'à la promotion en commande réelle."
   },
   "status_options": {
     "active": "Actif",

@@ -148,6 +148,8 @@ function Gated({ landingPageId }: { landingPageId: string }) {
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [name, setName] = useState("");
   const [imageGap, setImageGap] = useState(0);
+  /** Test-mode page: its orders land in the isolated test orders view. */
+  const [isTest, setIsTest] = useState(false);
 
   // Slug editing: committed value (autosaved) + in-flight draft while editing
   const [slugDraft, setSlugDraft] = useState<string | null>(null);
@@ -168,6 +170,7 @@ function Gated({ landingPageId }: { landingPageId: string }) {
       setLp(data);
       setName(data.name);
       setImageGap(data.imageGap);
+      setIsTest(data.isTest ?? false);
       setSlugDraft(null);
       setSaveState("idle");
     } catch (cause) {
@@ -183,7 +186,9 @@ function Gated({ landingPageId }: { landingPageId: string }) {
   useEffect(() => {
     if (!lp || !canManage) return;
     const drifted =
-      (name.trim() !== "" && name !== lp.name) || imageGap !== lp.imageGap;
+      (name.trim() !== "" && name !== lp.name) ||
+      imageGap !== lp.imageGap ||
+      isTest !== (lp.isTest ?? false);
     if (!drifted) return;
 
     setSaveState("saving");
@@ -194,6 +199,7 @@ function Gated({ landingPageId }: { landingPageId: string }) {
           const updated = await updateLandingPage(landingPageId, {
             ...(name.trim() !== "" && name !== lp.name ? { name: name.trim() } : {}),
             ...(imageGap !== lp.imageGap ? { imageGap } : {}),
+            ...(isTest !== (lp.isTest ?? false) ? { isTest } : {}),
           });
           setLp(updated.data);
           setSaveState("saved");
@@ -706,6 +712,25 @@ function Gated({ landingPageId }: { landingPageId: string }) {
               disabled={!canManage}
               onChange={(event) => setImageGap(Number(event.currentTarget.value))}
               className="w-full accent-primary"
+            />
+          </label>
+        </div>
+        <div className="mt-6">
+          <label className="flex cursor-pointer items-center justify-between gap-3">
+            <span>
+              <span className="block text-xs font-semibold text-foreground">
+                {t("studio.test_mode_label")}
+              </span>
+              <span className="mt-0.5 block text-[11px] text-muted-foreground">
+                {t("studio.test_mode_hint")}
+              </span>
+            </span>
+            <input
+              type="checkbox"
+              checked={isTest}
+              disabled={!canManage}
+              onChange={(event) => setIsTest(event.currentTarget.checked)}
+              className="size-5 accent-amber-500"
             />
           </label>
         </div>

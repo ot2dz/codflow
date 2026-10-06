@@ -74,6 +74,8 @@ export interface Product {
   showInStore: boolean;
   storeFeatured: boolean;
   freeShipping?: boolean;
+  /** Test-mode product: orders from it are flagged as test orders. */
+  isTest?: boolean;
   deletedAt?: string | null;
   publishedAt?: string | null;
   category?: ProductCategory | null;

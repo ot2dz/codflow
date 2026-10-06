@@ -382,8 +382,9 @@ export function shipmentUpdateFieldSupport(companyCode: string): {
 }
 
 export function canAssignOrder(
-  order: Pick<OrderListItem, "status" | "trackingNumber" | "deliveryMethod">,
+  order: Pick<OrderListItem, "status" | "trackingNumber" | "deliveryMethod" | "isTest">,
 ): boolean {
+  if (order.isTest) return false;
   return (
     !order.trackingNumber &&
     order.deliveryMethod !== "company" &&
@@ -400,9 +401,10 @@ export function canAssignOrder(
 export function canDispatchOrder(
   order: Pick<
     OrderListItem,
-    "status" | "trackingNumber" | "driverId" | "deliveryMethod"
+    "status" | "trackingNumber" | "driverId" | "deliveryMethod" | "isTest"
   >,
 ): boolean {
+  if (order.isTest) return false;
   const driverCommitted =
     order.deliveryMethod === "driver" && Boolean(order.driverId);
   return (

@@ -12,6 +12,12 @@ const landingPageBaseSchema = z.object({
   imageGap: z.number().int().min(0).max(200).default(0),
   metaTitle: z.string().max(200).nullable().optional(),
   metaDescription: z.string().max(300).nullable().optional(),
+  /**
+   * Test-mode page (product validation without stock): every order it
+   * creates is flagged as a test order — isolated view, dispatch blocked,
+   * excluded from live analytics — until the merchant promotes it.
+   */
+  isTest: z.boolean().optional(),
 });
 
 export const createLandingPageSchema = landingPageBaseSchema;

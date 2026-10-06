@@ -156,7 +156,9 @@
     "variant_image": "Image",
     "variant_image_select": "Select image",
     "variant_image_remove": "Remove image",
-    "images_reorder_hint": "Use arrows to reorder"
+    "images_reorder_hint": "Use arrows to reorder",
+    "test_mode_label": "Test product (validation)",
+    "test_mode_hint": "Orders from this product land in the isolated Test view — no stock needed, dispatch blocked until promoted to a live order."
   },
   "status_options": {
     "active": "Active",

@@ -66,6 +66,10 @@ _Avoid_: Rejected, cancelled by customer, refunded
 Order terminated before delivery (by merchant or system).
 _Avoid_: Deleted, voided, rejected
 
+**Test Order**:
+An order created from a test-mode product or landing page — a validation experiment run before any stock exists. It lives in its own isolated view, is refused by dispatch and driver assignment, and is excluded from live analytics until it is promoted to a real order.
+_Avoid_: Fake order, sample order, draft order
+
 **Unreachable**:
 Customer didn't answer phone attempts; order parked for retry.
 _Avoid_: No answer, failed contact, suspended
@@ -159,6 +163,8 @@ _Avoid_: COD inspection, delivery inspection
 ## Edge Cases
 
 **Auto-customer creation**: If `customerId` doesn't exist (walk-in/manual), customer is created automatically using order data.
+
+**Test orders never ship without promotion**: `is_test = 1` blocks both carrier dispatch and driver assignment. Promotion flips the flag on the same row (history intact) and is refused for non-test orders, already-dispatched orders, and terminal statuses.
 
 **Double return safety**: Cancelling or returning an order multiple times is idempotent - inventory restores only once.
 

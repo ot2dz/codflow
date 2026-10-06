@@ -167,6 +167,16 @@ export async function assignDriver(c: Context<AppContext>) {
     );
   }
 
+  // Test-mode orders (product validation without stock) are never delivered —
+  // neither by a carrier nor by one of our drivers. Promote first.
+  if (order.isTest) {
+    throw new BusinessLogicError(
+      "This is a test order (product validation) — promote it to a live order before assigning a driver",
+      ERROR_CODES.ORDER_IN_TEST_MODE,
+      { orderId }
+    );
+  }
+
   // Can't re-assign driver once the package is already out or completed.
   const lockedStatuses = ["out_for_delivery", "delivered", "returned", "cancelled"];
   if (lockedStatuses.includes(order.status)) {

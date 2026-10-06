@@ -37,6 +37,7 @@ export async function listOrders(c: Context<AppContext>) {
       status: c.req.query("status"),
       wilayaId: c.req.query("wilayaId"),
       search: c.req.query("search"),
+      isTest: c.req.query("isTest"),
       limit: c.req.query("limit"),
       offset: c.req.query("offset"),
     });
@@ -793,4 +794,40 @@ export async function deleteOrder(c: Context<AppContext>) {
     success: true,
     message: "Order deleted",
   }, 200);
+}
+
+/**
+ * POST /orders/promote
+ * Promote test-mode orders into the live orders book: flips `is_test` to 0
+ * on the SAME row (customer, lines and history preserved) and leaves an
+ * auditable status-history entry tagged `test-promotion`. Per-order refusals
+ * (not a test order, already dispatched, terminal status) are reported, never
+ * silently dropped.
+ */
+export async function promoteOrders(c: Context<AppContext>) {
+  const db = getDb(c.env.DB);
+
+  const bodyData: any = (c.req as any).valid?.("json") ?? (await c.req.json().catch(() => ({})));
+  const orderIds: string[] = Array.isArray(bodyData?.orderIds) ? bodyData.orderIds : [];
+  if (orderIds.length === 0) {
+    throw new ValidationError("orderIds must be a non-empty array", ERROR_CODES.REQUIRED_FIELD_MISSING);
+  }
+
+  const result = await queries.promoteTestOrders(db, orderIds);
+
+  const user = c.get("user");
+  await logActivity(db, user, ACTIONS.ORDER_UPDATED, {
+    type: "order",
+    id: result.promoted[0] ?? orderIds[0],
+    label: `${result.promoted.length} test order(s) promoted to live`,
+  }, { promoted: result.promoted.length, refused: result.refused.length });
+
+  return c.json(
+    {
+      success: true,
+      data: result,
+      message: `${result.promoted.length} order(s) promoted to live`,
+    },
+    200,
+  );
 }

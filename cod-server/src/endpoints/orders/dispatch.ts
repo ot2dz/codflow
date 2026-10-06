@@ -84,6 +84,16 @@ export async function dispatchToCompany(c: Context<AppContext>) {
     );
   }
 
+  // Test-mode orders (product validation without stock) must never reach a
+  // carrier. Promotion to a live order is the only path forward.
+  if (order.isTest) {
+    throw new BusinessLogicError(
+      "This is a test order (product validation) — promote it to a live order before dispatching",
+      ERROR_CODES.ORDER_IN_TEST_MODE,
+      { orderId }
+    );
+  }
+
   // Business rule: delivery methods are mutually exclusive.
   // If a driver is already assigned for manual delivery, block company dispatch.
   if (order.driverId && order.deliveryMethod === "driver") {
@@ -539,6 +549,11 @@ export async function bulkDispatch(c: Context<AppContext>) {
     }
     if (order.trackingNumber) {
       orderResults.push({ orderId, orderNumber: order.orderNumber, error: `Already dispatched — tracking: ${order.trackingNumber}` });
+      continue;
+    }
+    // Test-mode orders are never handed to a carrier (see single dispatch).
+    if (order.isTest) {
+      orderResults.push({ orderId, orderNumber: order.orderNumber, error: "Test order — promote to a live order before dispatching" });
       continue;
     }
     if (!order.wilayaId || !order.communeId) {

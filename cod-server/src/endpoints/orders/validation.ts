@@ -140,6 +140,11 @@ export const orderFiltersSchema = z.object({
   status: z.enum(ORDER_STATUSES).optional(),
   wilayaId: z.coerce.number().int().optional(),
   search: z.string().optional(),
+  /** Test-mode scope: true = test orders only, false = live orders only, omitted = both. */
+  isTest: z
+    .enum(["true", "false"])
+    .transform((v) => v === "true")
+    .optional(),
   limit: z.coerce.number().int().positive().max(100).default(50),
   offset: z.coerce.number().int().min(0).default(0),
   cursor: z
@@ -165,6 +170,17 @@ export const bulkDispatchSchema = z.object({
 });
 
 export type BulkDispatchInput = z.infer<typeof bulkDispatchSchema>;
+
+/**
+ * POST /orders/promote — move test-mode orders into the live orders book:
+ * flips `is_test` to 0 on the same row (history preserved). Refused for
+ * non-test orders, already-dispatched orders, and terminal statuses.
+ */
+export const promoteOrdersSchema = z.object({
+  orderIds: z.array(z.string().min(1)).min(1).max(200, "Maximum 200 orders per promotion"),
+});
+
+export type PromoteOrdersInput = z.infer<typeof promoteOrdersSchema>;
 
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;
 export type UpdateOrderStatusInput = z.infer<typeof updateOrderStatusSchema>;

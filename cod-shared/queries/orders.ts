@@ -48,6 +48,11 @@ export interface OrderFilters {
   limit?: number;
   offset?: number;
   /**
+   * Test-mode scope. true = only test orders, false = only live orders,
+   * undefined = both (default; the dashboard filters client-side).
+   */
+  isTest?: boolean;
+  /**
    * Opaque keyset cursor (encodeOrderCursor output): return rows strictly
    * before (createdAt, id). Takes precedence over offset when set.
    */
@@ -92,6 +97,10 @@ export async function getAllOrders(db: AppDb, filters: OrderFilters = {}) {
 
   if (filters.wilayaId) {
     conditions.push(eq(orders.wilayaId, filters.wilayaId));
+  }
+
+  if (filters.isTest !== undefined) {
+    conditions.push(eq(orders.isTest, filters.isTest));
   }
 
   if (filters.search) {
@@ -1309,6 +1318,7 @@ const STATUS_RANK: Record<string, number> = {
   preparing: 2,
   ready: 3,
   assigned: 4,
+  dispatched: 4,
   out_for_delivery: 5,
   delivered: 6,
   returned: 6,
@@ -1526,4 +1536,69 @@ export async function incrementDeliveryAttempts(
       updatedAt: new Date().toISOString(),
     })
     .where(eq(orders.id, orderId));
+}
+
+export interface PromoteTestOrdersResult {
+  promoted: string[];
+  refused: Array<{ orderId: string; reason: "not_found" | "not_test" | "already_dispatched" | "terminal_status" }>;
+}
+
+/**
+ * Promote test-mode orders to real orders: flip `is_test` to 0 on the SAME
+ * row (history, customer, and line items are untouched) and leave an
+ * auditable status-history entry tagged `by = "test-promotion"`.
+ *
+ * Refusals (never silent): unknown order, order is not a test order, it was
+ * already dispatched (a parcel exists at the carrier), or it reached a
+ * terminal status (cancelled/returned/delivered) — nothing left to ship.
+ *
+ * Dispatch stays blocked while `is_test = 1`, so a promotion is the only path
+ * a test order can take towards a carrier.
+ */
+export async function promoteTestOrders(
+  db: AppDb,
+  orderIds: string[],
+): Promise<PromoteTestOrdersResult> {
+  const now = new Date().toISOString();
+  const result: PromoteTestOrdersResult = { promoted: [], refused: [] };
+  const terminal = new Set(["cancelled", "returned", "delivered"]);
+
+  for (const orderId of orderIds) {
+    const order = await db.select().from(orders).where(eq(orders.id, orderId)).get();
+    if (!order) {
+      result.refused.push({ orderId, reason: "not_found" });
+      continue;
+    }
+    if (!order.isTest) {
+      result.refused.push({ orderId, reason: "not_test" });
+      continue;
+    }
+    if (order.trackingNumber) {
+      result.refused.push({ orderId, reason: "already_dispatched" });
+      continue;
+    }
+    if (terminal.has(order.status)) {
+      result.refused.push({ orderId, reason: "terminal_status" });
+      continue;
+    }
+
+    const statements: BatchStatement[] = [
+      db
+        .update(orders)
+        .set({ isTest: false, updatedAt: now })
+        .where(eq(orders.id, orderId)),
+      db.insert(orderStatusHistory).values({
+        id: crypto.randomUUID(),
+        orderId,
+        status: order.status,
+        timestamp: now,
+        by: "test-promotion",
+      }),
+    ];
+
+    await db.batch(statements as [BatchStatement, ...BatchStatement[]]);
+    result.promoted.push(orderId);
+  }
+
+  return result;
 }

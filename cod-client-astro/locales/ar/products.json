@@ -156,7 +156,9 @@
     "variant_image": "الصورة",
     "variant_image_select": "اختر صورة",
     "variant_image_remove": "إزالة الصورة",
-    "images_reorder_hint": "استخدم الأسهم لإعادة الترتيب"
+    "images_reorder_hint": "استخدم الأسهم لإعادة الترتيب",
+    "test_mode_label": "منتج تجريبي (قيد الاختبار)",
+    "test_mode_hint": "طلبات هذا المنتج تدخل قسم «التجارب» المعزول — بلا مخزون، والشحن محجوب حتى تُرقّى إلى طلبية حقيقية."
   },
   "status_options": {
     "active": "نشط",

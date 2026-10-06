@@ -23,6 +23,7 @@ import {
   addOrderProductSchema,
   orderFiltersSchema,
   bulkDispatchSchema,
+  promoteOrdersSchema,
 } from "./validation";
 
 import {
@@ -728,8 +729,55 @@ Provider support: ecotrack ✅ | others ❌ OPERATION_NOT_SUPPORTED.`,
 // "bulk-dispatch" would be captured as an id param.
 const router = new OpenAPIHono<AppContext>();
 
+const promoteOrdersRoute = defineRoute({
+  method: "post",
+  path: "/promote",
+  auth: { scope: SCOPES.ORDERS_UPDATE },
+  tags: ["Orders"],
+  summary: "Promote test orders to live orders",
+  description: `Moves test-mode orders (product validation without stock) into the live orders book.
+
+**What happens:** \`is_test\` is flipped to 0 on the SAME row — customer, line items and full history are preserved — and an auditable status-history entry is appended (source \`test-promotion\`).
+
+**Refused per order** (reported in the response, never silent):
+- the order is not a test order
+- it already has a tracking number (a parcel exists at the carrier)
+- it reached a terminal status (cancelled / returned / delivered)
+
+**Why it matters:** a test order can never be dispatched while \`is_test = 1\`; promotion is the only path towards a carrier.`,
+  operationId: "promoteOrders",
+  body: promoteOrdersSchema,
+  responses: {
+    200: {
+      description: "Promotion result — promoted ids and per-order refusal reasons",
+      content: jsonContent(
+        z.object({
+          success: z.boolean(),
+          data: z.object({
+            promoted: z.array(z.string()),
+            refused: z.array(
+              z.object({
+                orderId: z.string(),
+                reason: z.enum(["not_found", "not_test", "already_dispatched", "terminal_status"]),
+              }),
+            ),
+          }),
+          message: z.string(),
+        }),
+      ),
+    },
+    400: {
+      description: "orderIds missing/empty or above the 200 cap (VALIDATION_FAILED)",
+    },
+  },
+  handler: handlers.promoteOrders,
+});
+
+// ─── Router ───────────────────────────────────────────────────────────────────
+
 router.openapi(listOrdersRoute.route, listOrdersRoute.handler);
 router.openapi(bulkDispatchRoute.route, bulkDispatchRoute.handler);
+router.openapi(promoteOrdersRoute.route, promoteOrdersRoute.handler);
 
 router.openapi(getOrderRoute.route, getOrderRoute.handler);
 router.openapi(createOrderRoute.route, createOrderRoute.handler);

@@ -41,6 +41,8 @@ export interface CreateProductData {
   storeFeatured: boolean;
   shippingProfileId?: string | null;
   freeShipping: boolean;
+  /** Test-mode product: its orders are flagged as test orders. */
+  isTest?: boolean;
 }
 
 export interface UpdateProductData {
@@ -65,6 +67,8 @@ export interface UpdateProductData {
   storeFeatured?: boolean;
   shippingProfileId?: string | null;
   freeShipping?: boolean;
+  /** Test-mode product: its orders are flagged as test orders. */
+  isTest?: boolean;
 }
 
 function toHandle(name: string, id: string) {
@@ -225,6 +229,7 @@ export async function createProduct(db: AppDb, data: CreateProductData) {
     storeFeatured: data.storeFeatured,
     shippingProfileId: data.shippingProfileId ?? null,
     freeShipping: data.freeShipping,
+    isTest: data.isTest ?? false,
     deletedAt: null,
     publishedAt: data.status === "ACTIVE" ? now : null,
     createdAt: now,
@@ -261,6 +266,7 @@ export async function updateProduct(db: AppDb, productId: string, data: UpdatePr
   if (data.storeFeatured !== undefined) updates.storeFeatured = data.storeFeatured;
   if (data.shippingProfileId !== undefined) updates.shippingProfileId = data.shippingProfileId ?? null;
   if (data.freeShipping !== undefined) updates.freeShipping = data.freeShipping;
+  if (data.isTest !== undefined) updates.isTest = data.isTest;
 
   const statements: BatchStatement[] = [
     db.update(products).set(updates).where(eq(products.id, productId)),

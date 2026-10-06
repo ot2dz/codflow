@@ -19,6 +19,7 @@ export type OrderForActions = Pick<
   | "companyId"
   | "trackingNumber"
   | "status"
+  | "isTest"
 >;
 
 export function AssignDriverDialog({

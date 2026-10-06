@@ -78,6 +78,8 @@
     "slug_edit": "Modifier le slug",
     "slug_apply": "Appliquer",
     "slug_invalid": "3-60 caractères : minuscules, chiffres, tirets",
-    "gap_hint": "Espace entre les images empilées"
+    "gap_hint": "Espace entre les images empilées",
+    "test_mode_label": "Page de test",
+    "test_mode_hint": "Ses commandes arrivent dans la vue Tests isolée (sans stock, expédition bloquée jusqu'à promotion)."
   }
 }

@@ -78,6 +78,8 @@
     "slug_edit": "Edit slug",
     "slug_apply": "Apply",
     "slug_invalid": "3-60 chars: lowercase letters, digits, hyphens",
-    "gap_hint": "Space between the stacked images"
+    "gap_hint": "Space between the stacked images",
+    "test_mode_label": "Test page",
+    "test_mode_hint": "Its orders go to the isolated Test view (no stock, dispatch blocked until promoted)."
   }
 }

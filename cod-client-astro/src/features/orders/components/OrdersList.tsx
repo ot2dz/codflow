@@ -1,5 +1,5 @@
 import { Fragment, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
-import { AlertCircle, Calendar, Check, Filter, PackageOpen, Trash2, X } from "lucide-react";
+import { AlertCircle, ArrowUpCircle, Calendar, Check, Filter, PackageOpen, Trash2, X } from "lucide-react";
 import { canScope, useIdentity } from "@/features/auth/components/RequireAuth";
 import { useT } from "@/i18n/react";
 import { ApiError } from "@/lib/api";
@@ -10,6 +10,7 @@ import {
   listAllOrders,
   listDeliveryCompanies,
   listDrivers,
+  promoteOrders,
 } from "@/features/orders/api";
 import {
   BULK_STATUS_TARGETS,
@@ -140,8 +141,10 @@ export function OrdersList() {
   const [group, setGroup] = useState<OrderGroupKey>("all");
   const [showDuplicates, setShowDuplicates] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [bulkBusy, setBulkBusy] = useState<null | "status" | "delete">(null);
+  const [bulkBusy, setBulkBusy] = useState<null | "status" | "delete" | "promote">(null);
   const [bulkStatus, setBulkStatus] = useState("");
+  /** Test-mode view: live orders (default) or 🧪 test orders only. */
+  const [testScope, setTestScope] = useState<"live" | "test">("live");
   const confirmBulk = useConfirmDialog();
 
   // Selection keyed by order id; ids that vanish after a delete/reload are
@@ -270,9 +273,19 @@ export function OrdersList() {
   if (orders === null) return <OrderSkeleton />;
 
   const filteredOrders = filterOrders(orders, deferredFilters);
+
+  // ── Test-mode view split ────────────────────────────────────────────────
+  // Test orders (product validation, no stock yet) live in their own tab so
+  // the live orders book and its stats never mix with experiments.
+  const testCount = orders.filter((order) => order.isTest === true).length;
+  const liveCount = orders.length - testCount;
+  const scopedOrders = filteredOrders.filter(
+    (order) => (order.isTest === true) === (testScope === "test"),
+  );
+
   const displayUnits: OrderUnit[] = showDuplicates
-    ? filteredOrders.map((order) => ({ primary: order, duplicates: [] }))
-    : groupDuplicateOrders(filteredOrders);
+    ? scopedOrders.map((order) => ({ primary: order, duplicates: [] }))
+    : groupDuplicateOrders(scopedOrders);
   const groupCounts = orderGroupCounts(
     displayUnits.map((unit) => unit.primary),
   );
@@ -405,6 +418,32 @@ export function OrdersList() {
     }
   }
 
+  /**
+   * Move the selected test orders into the live orders book (same rows,
+   * history preserved). Refusals come back per order — surface, never hide.
+   */
+  async function runBulkPromote() {
+    if (bulkBusy) return;
+    const ids = [...selection];
+    setBulkBusy("promote");
+    try {
+      const result = await promoteOrders(ids);
+      const message = result.refused.length
+        ? t("test_promote_partial")
+            .replace("{ok}", String(result.promoted.length))
+            .replace("{failed}", String(result.refused.length))
+        : t("test_promote_done").replace("{ok}", String(result.promoted.length));
+      if (result.refused.length) notify.error(message);
+      else notify.flashSuccess(message);
+      setSelectedIds(new Set());
+      await load();
+    } catch (cause) {
+      setActionError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      setBulkBusy(null);
+    }
+  }
+
 
   return (
     <div className="space-y-3">
@@ -421,6 +460,51 @@ export function OrdersList() {
           </button>
         </Alert>
       )}
+      <div className="flex flex-wrap items-center gap-2">
+        <div
+          role="tablist"
+          aria-label={t("test_scope_label")}
+          className="inline-flex rounded-xl border border-border bg-muted/40 p-0.5"
+        >
+          <button
+            type="button"
+            role="tab"
+            aria-selected={testScope === "live"}
+            onClick={() => setTestScope("live")}
+            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+              testScope === "live"
+                ? "bg-background text-foreground shadow-xs"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {t("test_scope_live")}
+            <span className="rounded-full bg-muted px-1.5 text-[10.5px] tabular-nums text-muted-foreground">
+              {liveCount}
+            </span>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={testScope === "test"}
+            onClick={() => setTestScope("test")}
+            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+              testScope === "test"
+                ? "bg-amber-500/15 text-amber-700 shadow-xs"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            🧪 {t("test_scope_test")}
+            <span className="rounded-full bg-amber-500/15 px-1.5 text-[10.5px] tabular-nums text-amber-700">
+              {testCount}
+            </span>
+          </button>
+        </div>
+        {testScope === "test" && (
+          <span className="rounded-lg bg-amber-500/10 px-3 py-1.5 text-xs font-semibold text-amber-700">
+            {t("test_banner")}
+          </span>
+        )}
+      </div>
       <Card flush>
         <div className="space-y-3 border-b border-border p-3">
           <div
@@ -767,6 +851,17 @@ export function OrdersList() {
               {t("bulk_selected").replace("{n}", String(selection.size))}
             </span>
             <div className="ms-auto flex flex-wrap items-center justify-end gap-2">
+              {testScope === "test" && canBulkStatus && (
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={bulkBusy !== null}
+                  onClick={() => void runBulkPromote()}
+                >
+                  <ArrowUpCircle size={14} />
+                  {bulkBusy === "promote" ? t("bulk_working") : t("test_promote")}
+                </Button>
+              )}
               {canBulkStatus && (
                 <>
                   <Select

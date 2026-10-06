@@ -512,3 +512,14 @@ describe("bulk selection", () => {
     expect([...pruned].sort()).toEqual(["1", "3"]);
   });
 });
+describe("test-mode guards (dashboard)", () => {
+  it("canAssignOrder refuses test-mode orders", () => {
+    expect(canAssignOrder(order({ status: "ready", isTest: true }))).toBe(false);
+    expect(canAssignOrder(order({ status: "ready", isTest: false }))).toBe(true);
+  });
+
+  it("canDispatchOrder refuses test-mode orders", () => {
+    expect(canDispatchOrder(order({ status: "ready", isTest: true }))).toBe(false);
+    expect(canDispatchOrder(order({ status: "ready", isTest: false }))).toBe(true);
+  });
+});

@@ -38,6 +38,7 @@ import {
   reviews,
   offers,
   stockMovements,
+  landingPages,
 } from "../db/schema";
 import type { AppDb } from "../db/client";
 
@@ -697,7 +698,7 @@ export async function createStoreOrder(
   // unit price. The client's pricePerUnit is display-only and NEVER trusted —
   // it reaches this function over plain HTTP and is trivially editable.
   const catalogPriceRow = await db
-    .select({ price: products.price, trackInventory: products.trackInventory, freeShipping: products.freeShipping })
+    .select({ price: products.price, trackInventory: products.trackInventory, freeShipping: products.freeShipping, isTest: products.isTest })
     .from(products)
     .where(and(eq(products.id, data.productId), isNull(products.deletedAt)))
     .get();
@@ -727,6 +728,18 @@ export async function createStoreOrder(
     activeOffer?.discountType === "free_shipping" || catalogPriceRow?.freeShipping === true
       ? 0
       : data.deliveryFee;
+
+  // Test-mode snapshot: the order inherits the flag from its source — a test
+  // landing page or a test product. Living with the order from here on;
+  // promoting it (is_test -> 0) is the only path towards a carrier.
+  const landingPageIsTest = data.landingPageId
+    ? (await db
+        .select({ isTest: landingPages.isTest })
+        .from(landingPages)
+        .where(eq(landingPages.id, data.landingPageId))
+        .get())?.isTest === true
+    : false;
+  const isTestOrder = landingPageIsTest || catalogPriceRow?.isTest === true;
 
   const lineRows: Array<typeof orderProducts.$inferInsert> = [];
 
@@ -983,6 +996,7 @@ export async function createStoreOrder(
       ipAddress: data.ipAddress ?? null,
       userAgent: data.userAgent ?? null,
       landingPageId: data.landingPageId ?? null,
+      isTest: isTestOrder,
       createdAt: now,
       updatedAt: now,
     }),

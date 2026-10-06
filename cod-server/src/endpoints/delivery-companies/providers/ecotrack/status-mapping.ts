@@ -53,9 +53,26 @@ const ACTIVITY_MAP: Record<string, OrderStatus | null> = {
 /**
  * Map an EcoTrack status enum key (get/orders rows, get/orders/status) to our
  * order status. Undefined = unmapped — surface raw, never guess.
+ *
+ * Tenants are inconsistent about accents on the enum keys: DHD/Packers return
+ * `encaissé_non_payé` / `retour_reçu` alongside the unaccented forms. Matching
+ * is therefore accent- and case-insensitive — without it those rows were
+ * skipped as "unmapped" and delivered parcels never reached our orders.
  */
+function normalizeKey(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+const NORMALIZED_STATUS_MAP: Record<string, OrderStatus> = Object.fromEntries(
+  Object.entries(STATUS_MAP).map(([key, value]) => [normalizeKey(key), value]),
+);
+
 export function mapEcotrackStatus(statusKey: string): OrderStatus | undefined {
-  return STATUS_MAP[statusKey];
+  return STATUS_MAP[statusKey] ?? NORMALIZED_STATUS_MAP[normalizeKey(statusKey)];
 }
 
 /**

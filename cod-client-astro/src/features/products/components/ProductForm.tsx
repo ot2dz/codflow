@@ -83,6 +83,8 @@ export function ProductForm({ productId }: { productId?: string }) {
   const [trackInventory, setTrackInventory] = useState(true);
   const [showInStore, setShowInStore] = useState(true);
   const [freeShipping, setFreeShipping] = useState(false);
+  /** Test-mode product (product validation without stock). */
+  const [isTest, setIsTest] = useState(false);
   const [inventory, setInventory] = useState("0");
   const [lowStockThreshold, setLowStockThreshold] = useState("5");
 
@@ -172,6 +174,7 @@ export function ProductForm({ productId }: { productId?: string }) {
         setTrackInventory(product.trackInventory);
         setShowInStore(product.showInStore);
         setFreeShipping(product.freeShipping ?? false);
+        setIsTest(product.isTest ?? false);
         setInventory(String(product.inventory));
         setLowStockThreshold(String(product.lowStockThreshold ?? 5));
         if (product.hasVariants) {
@@ -310,6 +313,7 @@ export function ProductForm({ productId }: { productId?: string }) {
         trackInventory,
         showInStore,
         freeShipping,
+        isTest,
         ...(editing
           ? {}
           : { inventory: hasVariants ? 0 : Number(inventory) || 0 }),
@@ -518,6 +522,8 @@ export function ProductForm({ productId }: { productId?: string }) {
           setShowInStore={setShowInStore}
           freeShipping={freeShipping}
           setFreeShipping={setFreeShipping}
+          isTest={isTest}
+          setIsTest={setIsTest}
           hasVariantsSwitch={hasVariantsSwitch}
           editing={editing}
           busy={busy}

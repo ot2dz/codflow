@@ -122,6 +122,23 @@ export function bulkDeleteOrders(ids: string[]): Promise<BulkResult> {
   );
 }
 
+export interface PromoteResult {
+  promoted: string[];
+  refused: Array<{
+    orderId: string;
+    reason: "not_found" | "not_test" | "already_dispatched" | "terminal_status";
+  }>;
+}
+
+/** Promote test-mode orders to live orders (same rows, history preserved). */
+export async function promoteOrders(orderIds: string[]): Promise<PromoteResult> {
+  const response = await apiFetch<DataEnvelope<PromoteResult>>(
+    "/api/orders/promote",
+    json({ method: "POST", body: JSON.stringify({ orderIds }) }),
+  );
+  return response.data;
+}
+
 export function assignDriver(id: string, driverId: string) {
   return apiFetch<DataEnvelope<null>>(`/api/orders/${encodeURIComponent(id)}/assign-driver`, json({ method: "PATCH", body: JSON.stringify({ driverId }) }));
 }

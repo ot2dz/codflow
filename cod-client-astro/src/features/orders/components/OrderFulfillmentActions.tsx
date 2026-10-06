@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+  ArrowUpCircle,
   Building2,
   Eye,
   MoreHorizontal,
@@ -9,7 +10,7 @@ import {
 import { canScope, useIdentity } from "@/features/auth/components/RequireAuth";
 import { useT } from "@/i18n/react";
 import { notify } from "@/lib/notify";
-import { deleteOrder } from "@/features/orders/api";
+import { deleteOrder, promoteOrders } from "@/features/orders/api";
 import {
   canAssignOrder,
   canDispatchOrder,
@@ -59,6 +60,25 @@ export function OrderRowActions({
     companies.length > 0 &&
     canDispatchOrder(order);
   const showDelete = canScope(identity, "orders:delete");
+  const showPromote = order.isTest === true && canScope(identity, "orders:update");
+  const [promoting, setPromoting] = useState(false);
+
+  async function promote() {
+    setPromoting(true);
+    try {
+      const result = await promoteOrders([order.id]);
+      if (result.promoted.length > 0) {
+        notify.flashSuccess(t("test_promote_done").replace("{ok}", "1"));
+      } else {
+        notify.error(t("test_promote_refused"));
+      }
+      await onChanged();
+    } catch (cause) {
+      onError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      setPromoting(false);
+    }
+  }
 
   async function remove() {
     if (
@@ -110,6 +130,12 @@ export function OrderRowActions({
           <DropdownItem onClick={() => setDispatchOpen(true)}>
             <Building2 size={14} />
             {t("actions.dispatch_to_company")}
+          </DropdownItem>
+        )}
+        {showPromote && (
+          <DropdownItem disabled={promoting} onClick={() => void promote()}>
+            <ArrowUpCircle size={14} />
+            {promoting ? t("bulk_working") : t("test_promote")}
           </DropdownItem>
         )}
         {showDelete && (

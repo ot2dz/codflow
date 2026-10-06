@@ -364,5 +364,13 @@
   "bulk_delete_confirm_desc": "The selected orders and their history will be permanently deleted. This cannot be undone.",
   "bulk_working": "Working…",
   "bulk_done": "Processed {ok} orders successfully",
-  "bulk_partial": "{ok} succeeded, {failed} failed — invalid or terminal transitions are rejected per order"
+  "bulk_partial": "{ok} succeeded, {failed} failed — invalid or terminal transitions are rejected per order",
+  "test_scope_label": "Orders scope",
+  "test_scope_live": "Orders",
+  "test_scope_test": "Test",
+  "test_banner": "Test mode — validation orders without stock. Promote a confirmed order before shipping it.",
+  "test_promote": "Move to live orders",
+  "test_promote_done": "{ok} order(s) moved to live orders",
+  "test_promote_partial": "{ok} moved, {failed} refused",
+  "test_promote_refused": "No order could be moved to live orders"
 }

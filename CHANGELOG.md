@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- orders/dashboard: **Test mode (product validation without stock)** —
+  `products.is_test` / `landing_pages.is_test` flag their orders at creation
+  (`orders.is_test`, snapshot); those orders live in an isolated **🧪 Test**
+  tab in the orders page, are **blocked from carrier dispatch and driver
+  assignment** at the API level, and are **excluded from live status
+  analytics**. When the merchant buys stock, confirmed test orders are
+  **promoted** (per-row menu or bulk toolbar action) — `is_test` flips to 0
+  on the SAME row (history, customer and lines preserved) and an auditable
+  `test-promotion` entry lands in the order timeline. Refusals (not a test
+  order, already dispatched, terminal status) are reported per order.
+  Migration `0028_test_mode_flags`; product form and LP studio gained the
+  toggle; i18n parity ar/en/fr.
+
 - dashboard: **one-tap WhatsApp outreach per order** — a WhatsApp button now
   sits next to the phone number in the orders table (desktop + mobile card)
   and on the order's customer card. Clicking opens `wa.me` with a

@@ -33,6 +33,8 @@ export interface LandingPage {
   productId: string;
   status: LandingPageStatus;
   imageGap: number;
+  /** Test-mode page: every order it creates is flagged as a test order. */
+  isTest: boolean;
   metaTitle: string | null;
   metaDescription: string | null;
   views: number;
@@ -54,6 +56,8 @@ export interface LandingPageListItem {
   productId: string;
   productName: string | null;
   productHandle: string | null;
+  /** Test-mode page: orders land in the test orders view. */
+  isTest: boolean;
   imageCount: number;
   views: number;
   orders: number;
@@ -76,6 +80,8 @@ export interface UpdateLandingPageInput {
   imageGap?: number;
   metaTitle?: string | null;
   metaDescription?: string | null;
+  /** Test-mode page: orders land in the test orders view. */
+  isTest?: boolean;
 }
 
 export interface SaveLandingPageImageInput {

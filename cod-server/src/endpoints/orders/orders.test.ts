@@ -347,6 +347,22 @@ describe("Orders — targeted business-logic tests", () => {
       const body: any = await res.json();
       expect(body.code).toBe(ERROR_CODES.ORDER_ALREADY_DISPATCHED);
     });
+
+    it("refuses a driver on a test-mode order (promotion required first)", async () => {
+      vi.mocked(queries.getOrderById).mockResolvedValue(
+        orderRow({ isTest: true, deliveryMethod: "unassigned", trackingNumber: null }) as any
+      );
+
+      const res = await app.request("/api/orders/ord_1/assign-driver", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ driverId: "drv_1" }),
+      });
+
+      expect(res.status).toBe(422);
+      const body: any = await res.json();
+      expect(body.code).toBe(ERROR_CODES.ORDER_IN_TEST_MODE);
+    });
   });
 
   // ─── 3. Unassign driver: locked-status guard + dispatched (allowed) ────────
@@ -401,6 +417,18 @@ describe("Orders — targeted business-logic tests", () => {
   // ─── 4. Dispatch guards ────────────────────────────────────────────────────
 
   describe("POST /api/orders/{id}/dispatch", () => {
+    it("refuses to dispatch a test-mode order (promotion required first)", async () => {
+      vi.mocked(queries.getOrderById).mockResolvedValue(
+        orderRow({ status: "ready", isTest: true }) as any
+      );
+
+      const res = await app.request("/api/orders/ord_1/dispatch", { method: "POST" });
+
+      expect(res.status).toBe(422);
+      const body: any = await res.json();
+      expect(body.code).toBe(ERROR_CODES.ORDER_IN_TEST_MODE);
+    });
+
     it("returns 422 when driver is assigned with deliveryMethod=driver (mutual exclusion)", async () => {
       vi.mocked(queries.getOrderById).mockResolvedValue(
         orderRow({ driverId: "drv_1", deliveryMethod: "driver", trackingNumber: null }) as any

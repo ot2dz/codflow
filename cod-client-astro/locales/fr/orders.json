@@ -364,5 +364,13 @@
   "bulk_delete_confirm_desc": "Les commandes sélectionnées et leur historique seront supprimées définitivement. Action irréversible.",
   "bulk_working": "En cours…",
   "bulk_done": "{ok} commandes traitees avec succes",
-  "bulk_partial": "{ok} réussies, {failed} échouées — les transitions invalides ou les statuts terminaux sont refusés par commande"
+  "bulk_partial": "{ok} réussies, {failed} échouées — les transitions invalides ou les statuts terminaux sont refusés par commande",
+  "test_scope_label": "Portée des commandes",
+  "test_scope_live": "Commandes",
+  "test_scope_test": "Tests",
+  "test_banner": "Mode test — commandes de validation sans stock. Promouvez une commande confirmée avant de l'expédier.",
+  "test_promote": "Passer en commandes réelles",
+  "test_promote_done": "{ok} commande(s) passées en commandes réelles",
+  "test_promote_partial": "{ok} déplacées, {failed} refusées",
+  "test_promote_refused": "Aucune commande n'a pu être passée en réelle"
 }

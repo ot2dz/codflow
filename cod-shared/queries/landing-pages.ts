@@ -30,6 +30,8 @@ export interface LandingPageListItem {
   productId: string;
   productName: string | null;
   productHandle: string | null;
+  /** Test-mode page: its orders are flagged as test orders. */
+  isTest: boolean;
   imageCount: number;
   views: number;
   orders: number;
@@ -46,6 +48,8 @@ export interface CreateLandingPageData {
   imageGap?: number;
   metaTitle?: string | null;
   metaDescription?: string | null;
+  /** Test-mode page: orders from it are flagged as test orders. */
+  isTest?: boolean;
 }
 
 export interface UpdateLandingPageData {
@@ -54,6 +58,8 @@ export interface UpdateLandingPageData {
   imageGap?: number;
   metaTitle?: string | null;
   metaDescription?: string | null;
+  /** Test-mode page: orders from it are flagged as test orders. */
+  isTest?: boolean;
 }
 
 export interface LandingPageImageInput {
@@ -105,6 +111,7 @@ async function resolveListRow(
       productId: landingPages.productId,
       productName: products.name,
       productHandle: products.handle,
+      isTest: landingPages.isTest,
       imageCount: sql<number>`(
         SELECT COUNT(*) FROM landing_page_images
         WHERE landing_page_images.landing_page_id = landing_pages.id
@@ -303,6 +310,7 @@ export async function createLandingPage(
     imageGap: data.imageGap ?? 0,
     metaTitle: data.metaTitle ?? null,
     metaDescription: data.metaDescription ?? null,
+    isTest: data.isTest ?? false,
     views: 0,
     createdAt: now,
     updatedAt: now,
@@ -325,6 +333,7 @@ export async function updateLandingPage(
       ...(data.imageGap !== undefined && { imageGap: data.imageGap }),
       ...(data.metaTitle !== undefined && { metaTitle: data.metaTitle ?? null }),
       ...(data.metaDescription !== undefined && { metaDescription: data.metaDescription ?? null }),
+      ...(data.isTest !== undefined && { isTest: data.isTest }),
       updatedAt: now,
     })
     .where(eq(landingPages.id, id));

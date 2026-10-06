@@ -17,6 +17,9 @@ interface ProductSettingsCardProps {
   setShowInStore: (val: boolean) => void;
   freeShipping: boolean;
   setFreeShipping: (val: boolean) => void;
+  /** Test-mode product: its orders land in the test orders view. */
+  isTest: boolean;
+  setIsTest: (val: boolean) => void;
   hasVariantsSwitch: boolean;
   editing: boolean;
   busy: boolean;
@@ -35,6 +38,8 @@ export function ProductSettingsCard({
   setShowInStore,
   freeShipping,
   setFreeShipping,
+  isTest,
+  setIsTest,
   hasVariantsSwitch,
   editing,
   busy,
@@ -144,6 +149,25 @@ export function ProductSettingsCard({
             }
             disabled={busy}
             className="size-5 accent-primary"
+          />
+        </label>
+      </div>
+      <div className="mt-4">
+        <label className="flex cursor-pointer items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold text-foreground">
+              {t("form.test_mode_label")}
+            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {t("form.test_mode_hint")}
+            </p>
+          </div>
+          <input
+            type="checkbox"
+            checked={isTest}
+            onChange={(event) => setIsTest(event.currentTarget.checked)}
+            disabled={busy}
+            className="size-5 accent-amber-500"
           />
         </label>
       </div>
