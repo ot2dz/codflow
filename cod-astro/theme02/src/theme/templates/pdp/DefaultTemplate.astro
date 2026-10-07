@@ -1,0 +1,63 @@
+---
+// Default PDP template — the theme02 sharp COD identity: gallery column +
+// bordered details card holding title/price and the order form.
+import type { PdpTemplateProps } from "./types";
+import ProductGallery from "@/theme/components/product/ProductGallery.astro";
+import ProductInfo from "@/theme/components/product/ProductInfo.astro";
+import OrderForm from "@/theme/components/order/OrderForm.astro";
+
+const {
+  product,
+  config,
+  content,
+  isRTL,
+  fieldErrors,
+  serverError,
+  basePrice,
+  comparePrice,
+  discountPct,
+  defaultVariant,
+  defaultVariantId,
+  isOutOfStock,
+  isLowStock,
+  lowStockText,
+  cur,
+} = Astro.props as PdpTemplateProps;
+---
+
+<div class="product-layout">
+  <div class="product-media">
+    <ProductGallery product={product} content={content} />
+  </div>
+
+  <div class="product-details">
+    <ProductInfo
+      product={product}
+      basePrice={basePrice}
+      comparePrice={comparePrice}
+      discountPct={discountPct}
+      cur={cur}
+      isLowStock={isLowStock}
+      lowStockText={lowStockText}
+      freeShippingBadge={content.freeShippingBadge}
+    />
+
+    <OrderForm
+      product={product}
+      content={content}
+      fieldErrors={fieldErrors}
+      serverError={serverError}
+      basePrice={basePrice}
+      defaultVariant={defaultVariant}
+      cur={cur}
+      isRTL={isRTL}
+      offers={product.offers}
+      defaultVariantId={defaultVariantId}
+      isOutOfStock={isOutOfStock}
+      otpEnabled={config.otpEnabled === true}
+      turnstileEnabled={config.turnstileEnabled === true}
+      turnstileSiteKey={config.turnstileSiteKey ?? null}
+      showCommune={config.showCommune !== false}
+    />
+  </div>
+</div>

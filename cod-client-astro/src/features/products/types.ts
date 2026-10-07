@@ -76,6 +76,12 @@ export interface Product {
   freeShipping?: boolean;
   /** Test-mode product: orders from it are flagged as test orders. */
   isTest?: boolean;
+  /** Product page template slug (see pdp-options.ts). */
+  template?: string;
+  /** Color preset slug ("" = inherit the store colors). */
+  palette?: string;
+  /** Rich page blocks rendered below the order form. */
+  contentBlocks?: unknown[] | null;
   deletedAt?: string | null;
   publishedAt?: string | null;
   category?: ProductCategory | null;

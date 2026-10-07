@@ -1,0 +1,99 @@
+---
+// Ecolino-style PDP template — classic two-column buy box: tall gallery with
+// thumbnails on the media side, and a buy box (rating, title, red price with
+// strike-through + save pill, trust bullets) whose action is the COD order
+// form. Colors come from the product's palette preset (config/pdp.ts).
+import type { PdpTemplateProps } from "./types";
+import ProductGallery from "@/theme/components/product/ProductGallery.astro";
+import OrderForm from "@/theme/components/order/OrderForm.astro";
+import { Icon } from "astro-icon/components";
+
+const {
+  product,
+  config,
+  content,
+  isRTL,
+  fieldErrors,
+  serverError,
+  basePrice,
+  comparePrice,
+  discountPct,
+  defaultVariant,
+  defaultVariantId,
+  isOutOfStock,
+  cur,
+} = Astro.props as PdpTemplateProps;
+
+const hasDiscount = comparePrice != null && comparePrice > basePrice;
+const reviewStats = product.reviewStats ?? null;
+const stars = reviewStats ? Math.round(Number(reviewStats.avgRating)) : 0;
+
+function fmt(n: number) {
+  return n.toLocaleString("ar-DZ");
+}
+
+const trustItems = [content.trust1Title, content.trust2Title, content.trust3Title].filter(Boolean);
+---
+
+<div class="pdp-eco">
+  <div class="pdp-eco-grid">
+    <div class="pdp-eco-media">
+      <ProductGallery product={product} content={content} />
+    </div>
+
+    <div class="pdp-eco-buy">
+      {reviewStats && (
+        <div class="pdp-eco-rating">
+          <span class="pdp-eco-stars" aria-hidden="true">
+            {"★".repeat(Math.max(0, Math.min(5, stars)))}
+            <span class="pdp-eco-stars-off">{"★".repeat(5 - Math.max(0, Math.min(5, stars)))}</span>
+          </span>
+          <span class="pdp-eco-rating-text">
+            {Number(reviewStats.reviewCount).toLocaleString("ar-DZ")} {content.reviewsTitle}
+          </span>
+        </div>
+      )}
+
+      <h1 class="pdp-eco-title">{product.name}</h1>
+
+      <div class="pdp-eco-price">
+        <span class="pdp-eco-price-now">
+          {fmt(basePrice)} <span class="pdp-eco-price-cur">{cur}</span>
+        </span>
+        {hasDiscount && (
+          <span class="pdp-eco-price-was">{fmt(comparePrice!)} {cur}</span>
+        )}
+        {hasDiscount && <span class="pdp-eco-save">-{discountPct}%</span>}
+      </div>
+
+      {trustItems.length > 0 && (
+        <ul class="pdp-eco-trust">
+          {trustItems.map((item) => (
+            <li>
+              <Icon name="heroicons:check" class="w-4 h-4 pdp-eco-trust-icon" />
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <OrderForm
+        product={product}
+        content={content}
+        fieldErrors={fieldErrors}
+        serverError={serverError}
+        basePrice={basePrice}
+        defaultVariant={defaultVariant}
+        cur={cur}
+        isRTL={isRTL}
+        offers={product.offers}
+        defaultVariantId={defaultVariantId}
+        isOutOfStock={isOutOfStock}
+        otpEnabled={config.otpEnabled === true}
+        turnstileEnabled={config.turnstileEnabled === true}
+        turnstileSiteKey={config.turnstileSiteKey ?? null}
+        showCommune={config.showCommune !== false}
+      />
+    </div>
+  </div>
+</div>

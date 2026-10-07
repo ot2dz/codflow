@@ -693,6 +693,22 @@ export const products = sqliteTable("products", {
    * promoted. Product-level flag; a landing page may override it.
    */
   isTest: integer("is_test", { mode: "boolean" }).notNull().default(false),
+  /**
+   * Product page template slug ("default" = the theme's own PDP layout).
+   * Resolved by the theme's template registry; unknown slugs fall back to
+   * the default so a stale value can never blank a page.
+   */
+  template: text("template").notNull().default("default"),
+  /**
+   * Color preset slug for the product page ("" = inherit the store's
+   * primary/accent colors). Presets live in the theme layer.
+   */
+  palette: text("palette").notNull().default(""),
+  /**
+   * Rich content blocks (JSON array: image_text | steps | two_images)
+   * rendered by templates that support them, below the order form.
+   */
+  contentBlocks: text("content_blocks"),
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
 });

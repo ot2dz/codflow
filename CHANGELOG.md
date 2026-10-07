@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- storefront: **per-product page templates + color presets + content blocks**
+  — `products.template` picks the product page layout from a theme registry
+  (`default` = the theme02 card, `ecolino` = classic two-column buy box with
+  rating, red price + save pill, trust bullets and a green call-to-action);
+  `products.palette` applies a color preset to that page only (`ecolino`,
+  `azure`, `noir`, or inherit the store colors); `products.content_blocks`
+  renders rich sections below the order form (image+text, step cards, two
+  images) composed from the product's uploaded photos. Unknown slugs fall
+  back safely to the default layout / store colors. Migration
+  `0029_product_templates`; dashboard product form gained the template +
+  palette pickers and the blocks editor (add/reorder/remove, per-step items);
+  the COD order engine is untouched; i18n parity ar/en/fr.
+
 - orders/dashboard: **Test mode (product validation without stock)** —
   `products.is_test` / `landing_pages.is_test` flag their orders at creation
   (`orders.is_test`, snapshot); those orders live in an isolated **🧪 Test**

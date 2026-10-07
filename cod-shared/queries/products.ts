@@ -43,6 +43,12 @@ export interface CreateProductData {
   freeShipping: boolean;
   /** Test-mode product: its orders are flagged as test orders. */
   isTest?: boolean;
+  /** Product page template slug ("" / "default" = theme default). */
+  template?: string;
+  /** Color preset slug ("" = inherit store colors). */
+  palette?: string;
+  /** Rich content blocks rendered below the order form (JSON in the DB). */
+  contentBlocks?: unknown[] | null;
 }
 
 export interface UpdateProductData {
@@ -69,6 +75,12 @@ export interface UpdateProductData {
   freeShipping?: boolean;
   /** Test-mode product: its orders are flagged as test orders. */
   isTest?: boolean;
+  /** Product page template slug ("" / "default" = theme default). */
+  template?: string;
+  /** Color preset slug ("" = inherit store colors). */
+  palette?: string;
+  /** Rich content blocks rendered below the order form (JSON in the DB). */
+  contentBlocks?: unknown[] | null;
 }
 
 function toHandle(name: string, id: string) {
@@ -230,6 +242,9 @@ export async function createProduct(db: AppDb, data: CreateProductData) {
     shippingProfileId: data.shippingProfileId ?? null,
     freeShipping: data.freeShipping,
     isTest: data.isTest ?? false,
+    template: data.template ?? "default",
+    palette: data.palette ?? "",
+    contentBlocks: data.contentBlocks ? JSON.stringify(data.contentBlocks) : null,
     deletedAt: null,
     publishedAt: data.status === "ACTIVE" ? now : null,
     createdAt: now,
@@ -267,6 +282,11 @@ export async function updateProduct(db: AppDb, productId: string, data: UpdatePr
   if (data.shippingProfileId !== undefined) updates.shippingProfileId = data.shippingProfileId ?? null;
   if (data.freeShipping !== undefined) updates.freeShipping = data.freeShipping;
   if (data.isTest !== undefined) updates.isTest = data.isTest;
+  if (data.template !== undefined) updates.template = data.template;
+  if (data.palette !== undefined) updates.palette = data.palette;
+  if (data.contentBlocks !== undefined) {
+    updates.contentBlocks = data.contentBlocks ? JSON.stringify(data.contentBlocks) : null;
+  }
 
   const statements: BatchStatement[] = [
     db.update(products).set(updates).where(eq(products.id, productId)),

@@ -55,6 +55,7 @@ import {
   type VariantRow,
 } from "@/features/products/components/ProductVariantsCard";
 import { ProductSettingsCard } from "@/features/products/components/ProductSettingsCard";
+import { ProductContentBlocks, type ContentBlock } from "@/features/products/components/ProductContentBlocks";
 
 export function ProductForm({ productId }: { productId?: string }) {
   const t = useT("products");
@@ -85,6 +86,11 @@ export function ProductForm({ productId }: { productId?: string }) {
   const [freeShipping, setFreeShipping] = useState(false);
   /** Test-mode product (product validation without stock). */
   const [isTest, setIsTest] = useState(false);
+  /** Product page template slug + color preset (theme PDP registry). */
+  const [template, setTemplate] = useState<string>("default");
+  const [palette, setPalette] = useState<string>("");
+  /** Rich page blocks (image+text / steps / two images). */
+  const [blocks, setBlocks] = useState<ContentBlock[]>([]);
   const [inventory, setInventory] = useState("0");
   const [lowStockThreshold, setLowStockThreshold] = useState("5");
 
@@ -175,6 +181,9 @@ export function ProductForm({ productId }: { productId?: string }) {
         setShowInStore(product.showInStore);
         setFreeShipping(product.freeShipping ?? false);
         setIsTest(product.isTest ?? false);
+        setTemplate(product.template ?? "default");
+        setPalette(product.palette ?? "");
+        setBlocks(Array.isArray(product.contentBlocks) ? (product.contentBlocks as ContentBlock[]) : []);
         setInventory(String(product.inventory));
         setLowStockThreshold(String(product.lowStockThreshold ?? 5));
         if (product.hasVariants) {
@@ -314,6 +323,9 @@ export function ProductForm({ productId }: { productId?: string }) {
         showInStore,
         freeShipping,
         isTest,
+        template,
+        palette,
+        contentBlocks: blocks.length > 0 ? blocks : null,
         ...(editing
           ? {}
           : { inventory: hasVariants ? 0 : Number(inventory) || 0 }),
@@ -524,10 +536,23 @@ export function ProductForm({ productId }: { productId?: string }) {
           setFreeShipping={setFreeShipping}
           isTest={isTest}
           setIsTest={setIsTest}
+          template={template}
+          setTemplate={setTemplate}
+          palette={palette}
+          setPalette={setPalette}
           hasVariantsSwitch={hasVariantsSwitch}
           editing={editing}
           busy={busy}
         />
+
+        {editing && (
+          <ProductContentBlocks
+            blocks={blocks}
+            setBlocks={setBlocks}
+            imageUrls={(existingImages ?? []).map((image) => image.src)}
+            busy={busy}
+          />
+        )}
       </div>
       <StickyFormActions>
         <LinkButton href={backHref} variant="secondary">

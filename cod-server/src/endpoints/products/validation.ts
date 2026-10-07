@@ -8,6 +8,41 @@ const variantOptionSchema = z.object({
   })).min(1),
 });
 
+/**
+ * Rich content blocks for the product page (rendered by templates that
+ * support them, below the order form). Images are URLs already stored for
+ * the product (R2/media domain) or any absolute URL.
+ */
+const contentImage = z.string().min(1).max(600);
+const contentBlockSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("image_text"),
+    image: contentImage,
+    title: z.string().max(200).optional(),
+    text: z.string().max(3000).optional(),
+    imageSide: z.enum(["start", "end"]).optional(),
+  }),
+  z.object({
+    type: z.literal("steps"),
+    title: z.string().max(200).optional(),
+    items: z
+      .array(
+        z.object({
+          image: contentImage.optional(),
+          title: z.string().max(200).optional(),
+          text: z.string().max(1500).optional(),
+        }),
+      )
+      .min(1)
+      .max(6),
+  }),
+  z.object({
+    type: z.literal("two_images"),
+    images: z.array(contentImage).length(2),
+  }),
+]);
+export const contentBlocksSchema = z.array(contentBlockSchema).max(20);
+
 export const createProductSchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
@@ -33,6 +68,18 @@ export const createProductSchema = z.object({
   freeShipping: z.boolean().default(false),
   /** Test-mode product: orders from it are flagged as test orders. */
   isTest: z.boolean().default(false),
+  /** Product page template slug — resolved by the theme's registry. */
+  template: z
+    .string()
+    .regex(/^[a-z0-9][a-z0-9-]{0,39}$/, "Template slug: lowercase letters, digits, hyphens")
+    .default("default"),
+  /** Color preset slug ("" = inherit the store's colors). */
+  palette: z
+    .string()
+    .regex(/^[a-z0-9-]{0,40}$/, "Palette slug: lowercase letters, digits, hyphens")
+    .default(""),
+  /** Rich content blocks (image+text / steps / two images). */
+  contentBlocks: contentBlocksSchema.optional(),
 }).superRefine((data, ctx) => {
   if (!data.hasVariants && !data.sku) {
     ctx.addIssue({
@@ -67,6 +114,18 @@ export const updateProductSchema = z.object({
   freeShipping: z.boolean().optional(),
   /** Test-mode product: orders from it are flagged as test orders. */
   isTest: z.boolean().optional(),
+  /** Product page template slug — resolved by the theme's registry. */
+  template: z
+    .string()
+    .regex(/^[a-z0-9][a-z0-9-]{0,39}$/, "Template slug: lowercase letters, digits, hyphens")
+    .optional(),
+  /** Color preset slug ("" = inherit the store's colors). */
+  palette: z
+    .string()
+    .regex(/^[a-z0-9-]{0,40}$/, "Palette slug: lowercase letters, digits, hyphens")
+    .optional(),
+  /** Rich content blocks — pass null to clear. */
+  contentBlocks: contentBlocksSchema.nullable().optional(),
 });
 
 export const updateStatusSchema = z.object({

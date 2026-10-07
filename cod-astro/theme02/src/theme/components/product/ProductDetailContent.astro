@@ -1,14 +1,17 @@
 ---
-// ── theme02 product page layout ─────────────────────────────────────────────
-// Structure: gallery column + bordered details card (title/price + order form),
-// rich description below, reviews last. Matches the reference COD one-product
-// page while keeping CodFlow's order engine (variants, offers, OTP, commune).
-import OrderForm from "@/theme/components/order/OrderForm.astro";
-import ProductGallery from "@/theme/components/product/ProductGallery.astro";
-import ProductInfo from "@/theme/components/product/ProductInfo.astro";
+// ── PDP dispatcher (theme02) ────────────────────────────────────────────────
+// Computes every server-side value once (price, discount, stock), emits the
+// client data bridge, then renders the template the product selected:
+//   products.template → a template from src/theme/templates/pdp/
+//   products.palette  → color preset applied to this page only
+// Unknown slugs fall back safely (default template / store colors).
+import DefaultTemplate from "@/theme/templates/pdp/DefaultTemplate.astro";
+import EcolinoTemplate from "@/theme/templates/pdp/EcolinoTemplate.astro";
+import ContentBlocks from "@/theme/templates/pdp/ContentBlocks.astro";
 import ReviewsIsland from "@/theme/components/product/ReviewsIsland.astro";
 import ShippingIsland from "@/theme/components/product/ShippingIsland.astro";
 import { getProductJsonLd } from "@/theme/utils/seo";
+import { resolvePdpTemplate, pdpPaletteStyle } from "@/theme/config/pdp";
 import { fetchProductByHandle } from "@/core/api/client";
 
 interface Props {
@@ -41,6 +44,28 @@ const lowStockText = content.lowStock.replace("{n}", String(product.inventory));
 
 const defaultVariantId = defaultVariant?.id ?? null;
 const jsonLd = getProductJsonLd(product, basePrice);
+
+const templateSlug = resolvePdpTemplate(product.template);
+const paletteStyle = pdpPaletteStyle(product.palette);
+const blocks: any[] = Array.isArray(product.contentBlocks) ? product.contentBlocks : [];
+
+const templateProps = {
+  product,
+  config,
+  content,
+  isRTL,
+  fieldErrors,
+  serverError,
+  basePrice,
+  comparePrice,
+  discountPct,
+  defaultVariant,
+  defaultVariantId,
+  isOutOfStock,
+  isLowStock,
+  lowStockText,
+  cur,
+};
 ---
 
 <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
@@ -81,52 +106,24 @@ const jsonLd = getProductJsonLd(product, basePrice);
 
 <ShippingIsland server:defer />
 
-<div class="product-layout">
-  <!-- Gallery (first in DOM → appears on the start side, right in RTL) -->
-  <div class="product-media">
-    <ProductGallery product={product} content={content} />
-  </div>
+<!-- Palette preset (product page only) + template -->
+<div class="pdp-root" data-pdp-template={templateSlug} style={paletteStyle || undefined}>
+  {templateSlug === "ecolino" ? (
+    <EcolinoTemplate {...templateProps} />
+  ) : (
+    <DefaultTemplate {...templateProps} />
+  )}
 
-  <!-- Details card: title + price + order form -->
-  <div class="product-details">
-    <ProductInfo
-      product={product}
-      basePrice={basePrice}
-      comparePrice={comparePrice}
-      discountPct={discountPct}
-      cur={cur}
-      isLowStock={isLowStock}
-      lowStockText={lowStockText}
-      freeShippingBadge={content.freeShippingBadge}
-    />
+  {product.description && (
+    <section class="product-description">
+      <div class="product-description-inner">
+        <p class="product-description-text">{product.description}</p>
+      </div>
+    </section>
+  )}
 
-    <OrderForm
-      product={product}
-      content={content}
-      fieldErrors={fieldErrors}
-      serverError={serverError}
-      basePrice={basePrice}
-      defaultVariant={defaultVariant ?? null}
-      cur={cur}
-      isRTL={isRTL}
-      offers={product.offers}
-      defaultVariantId={defaultVariantId}
-      isOutOfStock={isOutOfStock}
-      otpEnabled={config.otpEnabled === true}
-      turnstileEnabled={config.turnstileEnabled === true}
-      turnstileSiteKey={config.turnstileSiteKey ?? null}
-      showCommune={config.showCommune !== false}
-    />
-  </div>
+  <ContentBlocks blocks={blocks} content={content} />
 </div>
-
-{product.description && (
-  <section class="product-description">
-    <div class="product-description-inner">
-      <p class="product-description-text">{product.description}</p>
-    </div>
-  </section>
-)}
 
 {config.reviewsEnabled && (
   <div class="reviews-wrap">

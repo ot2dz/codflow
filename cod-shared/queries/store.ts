@@ -321,6 +321,8 @@ export async function getStoreProductByHandle(
     inventory: totalInventory,
     variantOptions: product.variantOptions ? JSON.parse(product.variantOptions) : null,
     tags: product.tags ? JSON.parse(product.tags) : [],
+    /** Rich page blocks (parsed) — templates render them below the form. */
+    contentBlocks: product.contentBlocks ? JSON.parse(product.contentBlocks) : null,
     category: category ?? null,
     variants: variants.map((v) => ({
       ...v,

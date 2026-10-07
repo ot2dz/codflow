@@ -1,0 +1,77 @@
+---
+// Rich product page blocks (image+text | steps | two images), rendered below
+// the order form by any PDP template. Data is author-controlled JSON from the
+// dashboard; unknown block types are skipped — never crash a product page.
+import { Image } from "astro:assets";
+import { Icon } from "astro-icon/components";
+
+interface Props {
+  blocks: any[];
+  content: any;
+}
+
+const { blocks, content } = Astro.props;
+const list = (blocks ?? []).filter((b) => b && typeof b.type === "string");
+---
+
+{list.length > 0 && (
+  <div class="pdp-blocks">
+    {list.map((block) => {
+      if (block.type === "image_text") {
+        return (
+          <section class:list={["pdp-block-image-text", block.imageSide === "end" && "is-reversed"]}>
+            <div class="pdp-block-media">
+              {block.image && (
+                <Image src={block.image} alt={block.title ?? ""} width={720} height={720} format="webp" quality={85} loading="lazy" decoding="async" class="pdp-block-img" />
+              )}
+            </div>
+            <div class="pdp-block-copy">
+              {block.title && <h2 class="pdp-block-title">{block.title}</h2>}
+              {block.text && <p class="pdp-block-text">{block.text}</p>}
+            </div>
+          </section>
+        );
+      }
+
+      if (block.type === "steps") {
+        const items = Array.isArray(block.items) ? block.items : [];
+        return (
+          <section class="pdp-block-steps">
+            {block.title && <h2 class="pdp-block-title pdp-block-title-center">{block.title}</h2>}
+            <div class="pdp-steps-grid">
+              {items.map((item: any, index: number) => (
+                <article class="pdp-step-card">
+                  {item.image && (
+                    <Image src={item.image} alt={item.title ?? ""} width={480} height={480} format="webp" quality={85} loading="lazy" decoding="async" class="pdp-step-img" />
+                  )}
+                  <div class="pdp-step-copy">
+                    {item.title && (
+                      <h3 class="pdp-step-title">
+                        <span class="pdp-step-index">{index + 1}</span>
+                        {item.title}
+                      </h3>
+                    )}
+                    {item.text && <p class="pdp-block-text">{item.text}</p>}
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        );
+      }
+
+      if (block.type === "two_images") {
+        const images = Array.isArray(block.images) ? block.images : [];
+        return (
+          <section class="pdp-block-two-images">
+            {images.slice(0, 2).map((src: string) => (
+              <Image src={src} alt="" width={720} height={720} format="webp" quality={85} loading="lazy" decoding="async" class="pdp-block-img" />
+            ))}
+          </section>
+        );
+      }
+
+      return null;
+    })}
+  </div>
+)}

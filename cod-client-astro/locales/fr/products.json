@@ -158,7 +158,18 @@
     "variant_image_remove": "Supprimer image",
     "images_reorder_hint": "Utilisez les flèches pour réorganiser",
     "test_mode_label": "Produit en test (validation)",
-    "test_mode_hint": "Les commandes de ce produit arrivent dans la vue Tests isolée — sans stock, expédition bloquée jusqu'à la promotion en commande réelle."
+    "test_mode_hint": "Les commandes de ce produit arrivent dans la vue Tests isolée — sans stock, expédition bloquée jusqu'à la promotion en commande réelle.",
+    "pdp_template_label": "Modèle de page produit",
+    "pdp_template_default": "Par défaut (carte theme02)",
+    "pdp_template_default_hint": "Colonne galerie + carte détails bordée.",
+    "pdp_template_ecolino": "Buy box (boutique classique)",
+    "pdp_template_ecolino_hint": "Deux colonnes : note, prix rouge avec pastille d'économie, points de confiance, CTA vert.",
+    "pdp_palette_label": "Couleurs de la page",
+    "pdp_palette_hint": "La page utilise les couleurs de la boutique.",
+    "pdp_palette_inherit": "Couleurs de la boutique",
+    "pdp_palette_ecolino": "Vert / magenta",
+    "pdp_palette_azure": "Bleu / orange",
+    "pdp_palette_noir": "Noir / or"
   },
   "status_options": {
     "active": "Actif",
@@ -237,5 +248,30 @@
     "results_count": "SKU",
     "updated_label": "Mis à jour le",
     "empty_search_desc": "Aucun SKU ne correspond à cette recherche. Essayez un autre nom de produit, variante ou code SKU."
+  },
+  "blocks": {
+    "title": "Blocs de contenu",
+    "hint": "Sections supplémentaires sous le formulaire (image + texte, étapes, deux images). Choisissez parmi les images du produit.",
+    "empty": "Aucun bloc — ajoutez-en un ci-dessous.",
+    "type_image_text": "Image + texte",
+    "type_steps": "Cartes d'étapes",
+    "type_two_images": "Deux images",
+    "pick_image": "Choisir une image du produit",
+    "image_url": "ou collez une URL d'image",
+    "image": "Image",
+    "image_n": "Image {n}",
+    "block_title": "Titre",
+    "text": "Texte",
+    "image_side": "Côté de l'image",
+    "side_start": "Début",
+    "side_end": "Fin",
+    "step": "Étape {n}",
+    "add_step": "Ajouter une étape",
+    "add_image_text": "Ajouter image + texte",
+    "add_steps": "Ajouter des étapes",
+    "add_two_images": "Ajouter deux images",
+    "move_up": "Monter",
+    "move_down": "Descendre",
+    "remove": "Supprimer"
   }
 }

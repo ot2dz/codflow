@@ -158,7 +158,18 @@
     "variant_image_remove": "Remove image",
     "images_reorder_hint": "Use arrows to reorder",
     "test_mode_label": "Test product (validation)",
-    "test_mode_hint": "Orders from this product land in the isolated Test view — no stock needed, dispatch blocked until promoted to a live order."
+    "test_mode_hint": "Orders from this product land in the isolated Test view — no stock needed, dispatch blocked until promoted to a live order.",
+    "pdp_template_label": "Product page template",
+    "pdp_template_default": "Default (theme02 card)",
+    "pdp_template_default_hint": "Gallery column + bordered details card.",
+    "pdp_template_ecolino": "Buy box (classic store)",
+    "pdp_template_ecolino_hint": "Two-column buy box: rating, red price with save pill, trust bullets, green call-to-action.",
+    "pdp_palette_label": "Page colors",
+    "pdp_palette_hint": "Page uses the store's own colors.",
+    "pdp_palette_inherit": "Store colors",
+    "pdp_palette_ecolino": "Green / magenta",
+    "pdp_palette_azure": "Blue / orange",
+    "pdp_palette_noir": "Black / gold"
   },
   "status_options": {
     "active": "Active",
@@ -237,5 +248,30 @@
     "results_count": "SKUs",
     "updated_label": "Updated",
     "empty_search_desc": "No SKU matches this search. Try a different product name, variant or SKU code."
+  },
+  "blocks": {
+    "title": "Page content blocks",
+    "hint": "Extra sections under the order form (image + text, step cards, two images). Pick images from the product's uploaded photos.",
+    "empty": "No blocks yet — add one below.",
+    "type_image_text": "Image + text",
+    "type_steps": "Step cards",
+    "type_two_images": "Two images",
+    "pick_image": "Pick a product image",
+    "image_url": "or paste an image URL",
+    "image": "Image",
+    "image_n": "Image {n}",
+    "block_title": "Title",
+    "text": "Text",
+    "image_side": "Image side",
+    "side_start": "Start",
+    "side_end": "End",
+    "step": "Step {n}",
+    "add_step": "Add step",
+    "add_image_text": "Add image + text",
+    "add_steps": "Add steps",
+    "add_two_images": "Add two images",
+    "move_up": "Move up",
+    "move_down": "Move down",
+    "remove": "Remove"
   }
 }

@@ -158,7 +158,18 @@
     "variant_image_remove": "إزالة الصورة",
     "images_reorder_hint": "استخدم الأسهم لإعادة الترتيب",
     "test_mode_label": "منتج تجريبي (قيد الاختبار)",
-    "test_mode_hint": "طلبات هذا المنتج تدخل قسم «التجارب» المعزول — بلا مخزون، والشحن محجوب حتى تُرقّى إلى طلبية حقيقية."
+    "test_mode_hint": "طلبات هذا المنتج تدخل قسم «التجارب» المعزول — بلا مخزون، والشحن محجوب حتى تُرقّى إلى طلبية حقيقية.",
+    "pdp_template_label": "قالب صفحة المنتج",
+    "pdp_template_default": "الافتراضي (بطاقة theme02)",
+    "pdp_template_default_hint": "عمود المعرض + بطاقة التفاصيل المؤطرة.",
+    "pdp_template_ecolino": "صندوق الشراء (متجر كلاسيكي)",
+    "pdp_template_ecolino_hint": "عمودان: تقييم، سعر أحمر مع شارة توفير، نقاط ثقة، وزر شراء أخضر بارز.",
+    "pdp_palette_label": "ألوان الصفحة",
+    "pdp_palette_hint": "الصفحة تستعمل ألوان متجرك.",
+    "pdp_palette_inherit": "ألوان المتجر",
+    "pdp_palette_ecolino": "أخضر / أرجواني",
+    "pdp_palette_azure": "أزرق / برتقالي",
+    "pdp_palette_noir": "أسود / ذهبي"
   },
   "status_options": {
     "active": "نشط",
@@ -237,5 +248,30 @@
     "results_count": "رمز SKU",
     "updated_label": "حُدّث في",
     "empty_search_desc": "لا يوجد رمز SKU مطابق لهذا البحث. جرّب اسم منتج أو متغير أو رمز SKU آخر."
+  },
+  "blocks": {
+    "title": "كتل محتوى الصفحة",
+    "hint": "أقسام إضافية أسفل نموذج الطلب (صورة + نص، بطاقات خطوات، صورتان). اختر الصور من صور المنتج المرفوعة.",
+    "empty": "لا كتل بعد — أضف واحدة من الأسفل.",
+    "type_image_text": "صورة + نص",
+    "type_steps": "بطاقات خطوات",
+    "type_two_images": "صورتان",
+    "pick_image": "اختر صورة من المنتج",
+    "image_url": "أو الصق رابط صورة",
+    "image": "الصورة",
+    "image_n": "الصورة {n}",
+    "block_title": "العنوان",
+    "text": "النص",
+    "image_side": "جهة الصورة",
+    "side_start": "البداية",
+    "side_end": "النهاية",
+    "step": "الخطوة {n}",
+    "add_step": "إضافة خطوة",
+    "add_image_text": "إضافة صورة + نص",
+    "add_steps": "إضافة خطوات",
+    "add_two_images": "إضافة صورتين",
+    "move_up": "تحريك للأعلى",
+    "move_down": "تحريك للأسفل",
+    "remove": "حذف"
   }
 }

@@ -66,6 +66,13 @@ export const ProductSchema = z.object({
   status: z.string(),
   storeFeatured: z.boolean(),
   freeShipping: z.boolean().optional(),
+  isTest: z.boolean().optional(),
+  /** Product page template slug — resolved by the theme's PDP registry. */
+  template: z.string().optional(),
+  /** Color preset slug ("" / missing = inherit the store colors). */
+  palette: z.string().optional(),
+  /** Rich page blocks (shape validated in the theme layer). */
+  contentBlocks: z.array(z.record(z.string(), z.unknown())).nullable().optional(),
   inventory: z.number(),
   trackInventory: z.boolean(),
   category: z.object({

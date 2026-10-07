@@ -31,6 +31,30 @@ single switchboard for the checkout UI (header row, summary, address,
 sticky CTA, confirm note). It preserves CodFlow's order engine —
 variants, offers, OTP, Turnstile, commune resolution — untouched.
 
+## PDP templates (per-product layouts)
+
+The product page is a **dispatcher**, not a fixed layout:
+
+```
+src/pages/products/[slug].astro
+  → src/theme/templates/pdp/…   ← one file per template
+     · DefaultTemplate.astro    (slug "default" — the theme02 card)
+     · EcolinoTemplate.astro    (slug "ecolino" — classic buy box)
+     · ContentBlocks.astro      (shared: image+text / steps / two images)
+```
+
+- `src/theme/config/pdp.ts` registers the templates **and** the color
+  presets (`PDP_PALETTES`), emitted inline for the product page only.
+- Products pick a slug in the dashboard (`products.template`,
+  `products.palette`, `products.content_blocks`); unknown slugs fall back to
+  `default` / store colors — a stale value can never blank a page.
+- A template receives `PdpTemplateProps` (see template dir): every price,
+  discount and stock value is computed **once** in the dispatcher. Templates
+  arrange; they never fetch or price.
+- The dashboard keeps its own copy of the slug lists
+  (`cod-client-astro/src/features/products/pdp-options.ts`) because it must
+  not import theme code — keep both files in sync.
+
 ---
 
 ## The Two Hard Rules
