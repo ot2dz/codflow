@@ -169,7 +169,11 @@
     "pdp_palette_inherit": "Couleurs de la boutique",
     "pdp_palette_ecolino": "Vert / magenta",
     "pdp_palette_azure": "Bleu / orange",
-    "pdp_palette_noir": "Noir / or"
+    "pdp_palette_noir": "Noir / or",
+    "pdp_template_buybox": "Par défaut — buy box (style ecolino)",
+    "pdp_template_buybox_hint": "Média + titre, note, prix avec pastille, un seul CTA qui ouvre le formulaire.",
+    "pdp_template_card": "Carte theme02 (précédent)",
+    "pdp_template_card_hint": "Colonne galerie + carte détails bordée avec le formulaire intégré."
   },
   "status_options": {
     "active": "Actif",

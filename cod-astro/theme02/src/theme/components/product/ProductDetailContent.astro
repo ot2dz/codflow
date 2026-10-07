@@ -108,10 +108,10 @@ const templateProps = {
 
 <!-- Palette preset (product page only) + template -->
 <div class="pdp-root" data-pdp-template={templateSlug} style={paletteStyle || undefined}>
-  {templateSlug === "ecolino" ? (
-    <EcolinoTemplate {...templateProps} />
-  ) : (
+  {templateSlug === "card" ? (
     <DefaultTemplate {...templateProps} />
+  ) : (
+    <EcolinoTemplate {...templateProps} />
   )}
 
   {product.description && (

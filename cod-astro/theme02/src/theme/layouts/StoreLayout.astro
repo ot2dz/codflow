@@ -6,7 +6,6 @@ import Footer from "@/theme/components/layout/Footer.astro";
 import MobileNav from "@/theme/components/layout/MobileNav.astro";
 import type { StoreConfig } from "@/core/api/types";
 import type { StoreFrontContent } from "@/theme/config/content";
-import { Icon } from "astro-icon/components";
 import { DEFAULT_CONFIG } from "@/theme/config/store";
 
 interface Props {
@@ -40,9 +39,9 @@ const accent  = HEX.test(config.accentColor)  ? config.accentColor  : "#d6c196";
 const bg      = HEX.test(config.bgColor)      ? config.bgColor      : "#f8fafc";
 const font    = config.fontFamily.replace(/["<>]/g, "");
 
-// Google Fonts — default: Readex Pro (body) + IBM Plex Sans Arabic (headings)
+// Google Fonts — default identity: Poppins (Latin, reference) + Cairo (Arabic)
 const fontHref = config.fontUrl?.replace(/["<>]/g, "")
-  ?? "https://fonts.googleapis.com/css2?family=Readex+Pro:wght@200;300;400;500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap";
+  ?? "https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Cairo:wght@400;500;600;700;800&display=swap";
 ---
 
 <!doctype html>
@@ -62,11 +61,13 @@ const fontHref = config.fontUrl?.replace(/["<>]/g, "")
   />
 
   <body class:list={[!hideMobileNav && "has-mobile-nav"]}>
-    <!-- Announcement bar -->
+    <!-- Announcement bar (marquee, reference identity) -->
     {!marketing && (config.announcementBar || content?.announcementText) && (
-      <div class="store-announce">
-        <Icon name="heroicons:truck" class="w-3.5 h-3.5 opacity-80" />
-        <span>{config.announcementBar ?? content?.announcementText}</span>
+      <div class="store-announce" role="status">
+        <div class="store-announce-track">
+          <span>{config.announcementBar ?? content?.announcementText}</span>
+          <span aria-hidden="true">{config.announcementBar ?? content?.announcementText}</span>
+        </div>
       </div>
     )}
 

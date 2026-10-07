@@ -16,8 +16,8 @@ export interface PdpTemplateOption {
 }
 
 export const PDP_TEMPLATE_OPTIONS: PdpTemplateOption[] = [
-  { slug: "default", labelKey: "pdp_template_default", hintKey: "pdp_template_default_hint" },
-  { slug: "ecolino", labelKey: "pdp_template_ecolino", hintKey: "pdp_template_ecolino_hint" },
+  { slug: "default", labelKey: "pdp_template_buybox", hintKey: "pdp_template_buybox_hint" },
+  { slug: "card", labelKey: "pdp_template_card", hintKey: "pdp_template_card_hint" },
 ];
 
 export interface PdpPaletteOption {

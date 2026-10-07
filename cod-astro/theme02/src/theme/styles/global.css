@@ -20,11 +20,11 @@
   --color-text-main: var(--clr-text);
   --color-text-muted: var(--clr-text-2);
 
-  --font-body: var(--font-body), "Readex Pro", ui-sans-serif, system-ui, sans-serif;
+  --font-body: var(--font-body), "Poppins", "Cairo", ui-sans-serif, system-ui, sans-serif;
 
-  --radius-card: 0.75rem;
-  --radius-input: 0.625rem;
-  --radius-btn: 0.625rem;
+  --radius-card: 0.625rem;
+  --radius-input: 0.5rem;
+  --radius-btn: 0.5rem;
 
   --shadow-sm: 0 1px 2px rgba(0,0,0,.04);
   --shadow-md: 0 4px 12px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.03);
@@ -77,11 +77,19 @@
   /* Static UI tokens — not managed from the dashboard */
   --clr-surface: #ffffff;
   --clr-border: rgba(0, 0, 0, 0.06);
-  --clr-text: #292929;
-  --clr-text-2: #6b7280;
+  --clr-text: #121212;
+  --clr-text-2: rgba(18, 18, 18, 0.55);
+
+  /* Reference identity accents (ecolino replica — not partner-managed) */
+  --clr-announce: #d31476;
+  --clr-price: #e02b1d;
+  --clr-save: #9a8b57;
+  --clr-steps-bg: #e9f7de;
+  --clr-footer: #111111;
+  --clr-footer-text: rgba(255, 255, 255, 0.82);
 
   /* Display face for headings (static — not partner-managed) */
-  --font-head: "IBM Plex Sans Arabic", ui-sans-serif, system-ui, sans-serif;
+  --font-head: "Poppins", "Cairo", ui-sans-serif, system-ui, sans-serif;
   
   /* Semantic tokens for consistent theming */
   --clr-success: #047857;
@@ -137,25 +145,42 @@ body > main { flex: 1 0 auto; }
 ::view-transition-old(root) { animation: 200ms ease fade-out; }
 ::view-transition-new(root) { animation: 400ms var(--animate-spring) slide-up; }
 
-/* ── Announcement bar ────────────────────────────────────────────────────── */
+/* ── Announcement bar (reference: magenta marquee) ───────────────────────── */
 .store-announce {
-  background: var(--clr-primary);
+  background: var(--clr-announce);
   color: white;
   text-align: center;
-  padding: calc(0.5rem + var(--safe-top)) 1.25rem 0.5rem;
-  font-size: 0.75rem;
-  font-weight: 800;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
+  padding: calc(0.5rem + var(--safe-top)) 0 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  display: block;
+  overflow: hidden;
 }
-.store-announce svg {
-  width: 1rem;
-  height: 1rem;
-  opacity: 0.9;
+.store-announce svg { display: none; }
+.store-announce-track {
+  display: flex;
+  width: max-content;
+  animation: store-announce-scroll 22s linear infinite;
+}
+.store-announce-track > span {
+  padding-inline: 2.5rem;
+  white-space: nowrap;
+}
+@keyframes store-announce-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(50%); }
+}
+[dir="rtl"] .store-announce-track {
+  animation-name: store-announce-scroll-rtl;
+}
+@keyframes store-announce-scroll-rtl {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .store-announce-track { animation: none; justify-content: center; width: 100%; }
+  .store-announce-track > span:nth-child(2) { display: none; }
 }
 
 /* ── Hero Backgrounds ────────────────────────────────────────────────────── */
@@ -2048,7 +2073,7 @@ input[type="number"] {
   font-size: clamp(1.75rem, 4vw, 2rem);
   font-weight: 800;
   line-height: 1;
-  color: var(--pdp-price, var(--clr-primary));
+  color: var(--pdp-price, var(--clr-price));
 }
 .pdp-eco-price-cur { font-size: 0.55em; font-weight: 700; }
 .pdp-eco-price-was {
@@ -2059,7 +2084,7 @@ input[type="number"] {
 .pdp-eco-save {
   padding: 0.1875rem 0.5625rem;
   border-radius: 999px;
-  background: var(--pdp-save-bg, var(--clr-accent));
+  background: var(--pdp-save-bg, var(--clr-save));
   color: white;
   font-size: 0.875rem;
   font-weight: 700;
@@ -2196,6 +2221,45 @@ input[type="number"] {
 }
 body.pdp-sheet-open { overflow: hidden; }
 
+/* ── Footer (reference identity: dark) ───────────────────────────────────── */
+.pdp-footer { background: var(--clr-footer); color: var(--clr-footer-text); }
+.pdp-footer-brand {
+  font-size: 1.25rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+  color: white;
+}
+.pdp-footer-heading {
+  margin-bottom: 1rem;
+  font-size: 0.75rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: white;
+}
+.pdp-footer-link {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--clr-footer-text);
+  transition: color 0.2s ease;
+}
+a.pdp-footer-link:hover { color: white; }
+.pdp-footer-badge-icon {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex-shrink: 0;
+  border-radius: 0.625rem;
+  background: color-mix(in srgb, white 6%, transparent);
+  border: 1px solid color-mix(in srgb, white 12%, transparent);
+  color: var(--clr-primary);
+}
+.pdp-footer-badge-title { font-size: 0.6875rem; font-weight: 900; line-height: 1.2; color: white; }
+.pdp-footer-badge-sub { font-size: 0.625rem; font-weight: 700; color: var(--clr-footer-text); }
+.pdp-footer-bottom { border-top: 1px solid color-mix(in srgb, white 12%, transparent); }
+
 /* ── Rich content blocks ─────────────────────────────────────────────────── */
 .pdp-blocks {
   max-width: 80rem;
@@ -2248,7 +2312,7 @@ body.pdp-sheet-open { overflow: hidden; }
   flex-direction: column;
   overflow: hidden;
   border-radius: var(--radius-card);
-  background: var(--pdp-steps-bg, var(--clr-surface-alt));
+  background: var(--pdp-steps-bg, var(--clr-steps-bg));
 }
 .pdp-step-img { width: 100%; height: auto; }
 .pdp-step-copy { padding: 1.25rem 1rem 1.5rem; }

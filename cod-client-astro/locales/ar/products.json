@@ -169,7 +169,11 @@
     "pdp_palette_inherit": "ألوان المتجر",
     "pdp_palette_ecolino": "أخضر / أرجواني",
     "pdp_palette_azure": "أزرق / برتقالي",
-    "pdp_palette_noir": "أسود / ذهبي"
+    "pdp_palette_noir": "أسود / ذهبي",
+    "pdp_template_buybox": "الافتراضي — صندوق الشراء (نمط ecolino)",
+    "pdp_template_buybox_hint": "معرض + عنوان وتقييم وسعر مع شارة خصم، وزر واحد يفتح نموذج الطلب.",
+    "pdp_template_card": "بطاقة theme02 (السابق)",
+    "pdp_template_card_hint": "عمود المعرض + بطاقة تفاصيل مؤطرة وفيها نموذج الطلب مباشرة."
   },
   "status_options": {
     "active": "نشط",

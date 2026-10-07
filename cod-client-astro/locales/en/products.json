@@ -169,7 +169,11 @@
     "pdp_palette_inherit": "Store colors",
     "pdp_palette_ecolino": "Green / magenta",
     "pdp_palette_azure": "Blue / orange",
-    "pdp_palette_noir": "Black / gold"
+    "pdp_palette_noir": "Black / gold",
+    "pdp_template_buybox": "Default — buy box (ecolino look)",
+    "pdp_template_buybox_hint": "Media + title, rating, price with save pill, single CTA opening the order form.",
+    "pdp_template_card": "theme02 card (previous)",
+    "pdp_template_card_hint": "Gallery column + bordered details card with the inline order form."
   },
   "status_options": {
     "active": "Active",

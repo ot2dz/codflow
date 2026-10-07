@@ -22,13 +22,13 @@ export interface PdpTemplateDef {
 export const PDP_TEMPLATES: PdpTemplateDef[] = [
   {
     slug: "default",
-    labelKey: "pdp_template_default",
-    hintKey: "pdp_template_default_hint",
+    labelKey: "pdp_template_buybox",
+    hintKey: "pdp_template_buybox_hint",
   },
   {
-    slug: "ecolino",
-    labelKey: "pdp_template_ecolino",
-    hintKey: "pdp_template_ecolino_hint",
+    slug: "card",
+    labelKey: "pdp_template_card",
+    hintKey: "pdp_template_card_hint",
   },
 ];
 
