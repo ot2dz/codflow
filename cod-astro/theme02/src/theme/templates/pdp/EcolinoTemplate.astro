@@ -1,8 +1,9 @@
 ---
-// Ecolino-style PDP template — classic two-column buy box: tall gallery with
-// thumbnails on the media side, and a buy box (rating, title, red price with
-// strike-through + save pill, trust bullets) whose action is the COD order
-// form. Colors come from the product's palette preset (config/pdp.ts).
+// Ecolino-style PDP template — mobile-first, literal structure of the
+// reference: media (tall image + thumbnails) → title → rating → price
+// (red now / struck was / save pill) → single CTA → trust bullets.
+// The CTA opens the COD order form in a bottom sheet (mobile) / dialog
+// (desktop). Colors stay the merchant's own (palette optional).
 import type { PdpTemplateProps } from "./types";
 import ProductGallery from "@/theme/components/product/ProductGallery.astro";
 import OrderForm from "@/theme/components/order/OrderForm.astro";
@@ -21,12 +22,14 @@ const {
   defaultVariant,
   defaultVariantId,
   isOutOfStock,
+  isLowStock,
+  lowStockText,
   cur,
 } = Astro.props as PdpTemplateProps;
 
 const hasDiscount = comparePrice != null && comparePrice > basePrice;
 const reviewStats = product.reviewStats ?? null;
-const stars = reviewStats ? Math.round(Number(reviewStats.avgRating)) : 0;
+const stars = reviewStats ? Math.max(0, Math.min(5, Math.round(Number(reviewStats.avgRating)))) : 0;
 
 function fmt(n: number) {
   return n.toLocaleString("ar-DZ");
@@ -41,12 +44,13 @@ const trustItems = [content.trust1Title, content.trust2Title, content.trust3Titl
       <ProductGallery product={product} content={content} />
     </div>
 
-    <div class="pdp-eco-buy">
+    <div class="pdp-eco-info">
+      <h1 class="pdp-eco-title">{product.name}</h1>
+
       {reviewStats && (
         <div class="pdp-eco-rating">
           <span class="pdp-eco-stars" aria-hidden="true">
-            {"★".repeat(Math.max(0, Math.min(5, stars)))}
-            <span class="pdp-eco-stars-off">{"★".repeat(5 - Math.max(0, Math.min(5, stars)))}</span>
+            {"★".repeat(stars)}<span class="pdp-eco-stars-off">{"★".repeat(5 - stars)}</span>
           </span>
           <span class="pdp-eco-rating-text">
             {Number(reviewStats.reviewCount).toLocaleString("ar-DZ")} {content.reviewsTitle}
@@ -54,20 +58,34 @@ const trustItems = [content.trust1Title, content.trust2Title, content.trust3Titl
         </div>
       )}
 
-      <h1 class="pdp-eco-title">{product.name}</h1>
-
       <div class="pdp-eco-price">
         <span class="pdp-eco-price-now">
           {fmt(basePrice)} <span class="pdp-eco-price-cur">{cur}</span>
         </span>
-        {hasDiscount && (
-          <span class="pdp-eco-price-was">{fmt(comparePrice!)} {cur}</span>
-        )}
+        {hasDiscount && <span class="pdp-eco-price-was">{fmt(comparePrice!)} {cur}</span>}
         {hasDiscount && <span class="pdp-eco-save">-{discountPct}%</span>}
       </div>
 
-      {trustItems.length > 0 && (
+      <button type="button" class="pdp-eco-cta" data-open-order>
+        <span>{content.orderCta}</span>
+        <Icon name="heroicons:arrow-right" class="pdp-eco-cta-icon" />
+      </button>
+      {content.orderCtaSubtext && <p class="pdp-eco-cta-note">{content.orderCtaSubtext}</p>}
+
+      {(trustItems.length > 0 || isLowStock || product.freeShipping) && (
         <ul class="pdp-eco-trust">
+          {isLowStock && (
+            <li>
+              <Icon name="heroicons:exclamation-triangle" class="w-4 h-4 pdp-eco-trust-icon pdp-eco-trust-icon-warn" />
+              <span>{lowStockText}</span>
+            </li>
+          )}
+          {product.freeShipping && (
+            <li>
+              <Icon name="heroicons:truck" class="w-4 h-4 pdp-eco-trust-icon" />
+              <span>{content.freeShippingBadge}</span>
+            </li>
+          )}
           {trustItems.map((item) => (
             <li>
               <Icon name="heroicons:check" class="w-4 h-4 pdp-eco-trust-icon" />
@@ -76,8 +94,34 @@ const trustItems = [content.trust1Title, content.trust2Title, content.trust3Titl
           ))}
         </ul>
       )}
+    </div>
+  </div>
+</div>
 
+<!-- Order sheet: bottom sheet on mobile, dialog on desktop -->
+<div class="pdp-sheet" id="pdp-order-sheet" hidden>
+  <button
+    type="button"
+    class="pdp-sheet-backdrop"
+    data-close-order
+    tabindex="-1"
+    aria-hidden="true"
+  ></button>
+  <div class="pdp-sheet-panel" role="dialog" aria-modal="true" aria-label={content.formTitle}>
+    <div class="pdp-sheet-head">
+      <span class="pdp-sheet-title">{content.formTitle}</span>
+      <button
+        type="button"
+        class="pdp-sheet-close"
+        data-close-order
+        aria-label={content.ariaCloseOrder}
+      >
+        <span aria-hidden="true">×</span>
+      </button>
+    </div>
+    <div class="pdp-sheet-body">
       <OrderForm
+        embedded={true}
         product={product}
         content={content}
         fieldErrors={fieldErrors}
@@ -97,3 +141,39 @@ const trustItems = [content.trust1Title, content.trust2Title, content.trust3Titl
     </div>
   </div>
 </div>
+
+<script>
+  const initOrderSheet = () => {
+    const sheet = document.getElementById("pdp-order-sheet");
+    if (!sheet) return;
+    const panel = sheet.querySelector<HTMLElement>(".pdp-sheet-panel");
+
+    const open = () => {
+      sheet.hidden = false;
+      document.body.classList.add("pdp-sheet-open");
+      const firstField = sheet.querySelector<HTMLInputElement>("input, select, button");
+      firstField?.focus({ preventScroll: true });
+    };
+    const close = () => {
+      sheet.hidden = true;
+      document.body.classList.remove("pdp-sheet-open");
+    };
+
+    document.querySelectorAll<HTMLElement>("[data-open-order]").forEach((button) => {
+      button.addEventListener("click", open);
+    });
+    sheet.querySelectorAll<HTMLElement>("[data-close-order]").forEach((button) => {
+      button.addEventListener("click", close);
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !sheet.hidden) close();
+    });
+    panel?.addEventListener("click", (event) => event.stopPropagation());
+  };
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initOrderSheet);
+  } else {
+    initOrderSheet();
+  }
+</script>

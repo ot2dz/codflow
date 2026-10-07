@@ -29,6 +29,8 @@ interface Props {
   turnstileSiteKey?: string | null;
   showCommune?: boolean;
   landingPageSlug?: string | null;
+  /** Embedded (order sheet/modal): no sticky bar — the sheet IS the entry. */
+  embedded?: boolean;
 }
 
 const {
@@ -48,6 +50,7 @@ const {
   turnstileSiteKey = null,
   landingPageSlug = null,
   showCommune = true,
+  embedded = false,
 } = Astro.props;
 
 const comparePrice = defaultVariant?.compareAtPrice ?? product.compareAtPrice ?? null;
@@ -136,7 +139,7 @@ const comparePrice = defaultVariant?.compareAtPrice ?? product.compareAtPrice ??
     )}
   </form>
 
-  {ORDER_FORM.stickyMobileCta && !isOutOfStock && (
+  {!embedded && ORDER_FORM.stickyMobileCta && !isOutOfStock && (
     <div id="sticky-order-bar" class="theme02-sticky" aria-hidden="true">
       <button type="button" id="sticky-scroll-btn">
         {content.orderCta}

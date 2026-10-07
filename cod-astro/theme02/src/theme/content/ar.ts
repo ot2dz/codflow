@@ -213,6 +213,7 @@ export const ar: StoreFrontContent = {
   ariaGoToImage: "الانتقال إلى الصورة {n} من {total}",
   ariaPreviousImage: "الصورة السابقة",
   ariaNextImage: "الصورة التالية",
+  ariaCloseOrder: "إغلاق نموذج الطلب",
   ariaBrowseAllProducts: "تصفح جميع المنتجات",
   ariaBrowseCategoryProducts: "تصفح منتجات {category}",
   ariaProductCard: "{name} - {price} {currency}",

@@ -226,6 +226,8 @@ export interface StoreFrontContent {
   ariaGoToImage: string;
   ariaPreviousImage: string;
   ariaNextImage: string;
+  /** Closes the order sheet (buy-box template). */
+  ariaCloseOrder: string;
   ariaBrowseAllProducts: string;
   ariaBrowseCategoryProducts: string;
   ariaProductCard: string;
